@@ -5819,3 +5819,9 @@
   description:
     - "Map both Enroot's nvcr.io#... spelling and the recipe's nvcr.io/... spelling to the same prepared squash image."
   pr-link: XXX
+
+- config-keys:
+    - dsv4-fp4-gb300-dynamo-trt
+  description:
+    - "Derive a cache-local squash image with the empty bind-mount targets required by srt-slurm for NKX's older Pyxis runtime."
+  pr-link: XXX
