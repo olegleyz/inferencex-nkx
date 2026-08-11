@@ -397,6 +397,10 @@ echo "Configs available at: $SRT_REPO_DIR/"
 # Create srtslurm.yaml for srtctl (used by both frameworks)
 SRTCTL_ROOT="${SRT_REPO_DIR}"
 echo "Creating srtslurm.yaml configuration..."
+REGISTRY_IMAGE_ALIAS=""
+if [[ "$IMAGE" == *"#"* ]]; then
+    REGISTRY_IMAGE_ALIAS="  \"${IMAGE//#//}\": ${SQUASH_FILE}"
+fi
 cat > srtslurm.yaml <<EOF
 # SRT SLURM Configuration for GB300
 
@@ -432,6 +436,7 @@ containers:
   v0.5.11: ${SQUASH_FILE}
   v0.5.13.post1: ${SQUASH_FILE}
   "${IMAGE}": ${SQUASH_FILE}
+${REGISTRY_IMAGE_ALIAS}
   nginx-sqsh: ${NGINX_SQUASH_FILE}
 use_segment_sbatch_directive: false
 EOF

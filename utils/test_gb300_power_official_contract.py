@@ -55,6 +55,13 @@ def test_launcher_preserves_official_cluster_defaults_with_optional_overrides():
     assert 'SQUASH_DIR:-${INFERENCEX_CACHE_ROOT}/squash' in launcher
 
 
+def test_launcher_maps_registry_and_enroot_spellings_to_the_same_squash():
+    launcher = LAUNCHER_PATH.read_text()
+    assert 'if [[ "$IMAGE" == *"#"* ]]' in launcher
+    assert 'REGISTRY_IMAGE_ALIAS="  \\"${IMAGE//#//}\\": ${SQUASH_FILE}"' in launcher
+    assert "${REGISTRY_IMAGE_ALIAS}" in launcher
+
+
 def test_launcher_pins_power_producer():
     assert_pinned_clone_contract(LAUNCHER_PATH.read_text())
 

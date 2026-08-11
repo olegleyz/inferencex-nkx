@@ -5813,3 +5813,9 @@
   description:
     - "Prepare the ARM64 srtctl environment on the egress-capable login node so NKX compute nodes can run the pinned recipe without outbound package access."
   pr-link: XXX
+
+- config-keys:
+    - dsv4-fp4-gb300-dynamo-trt
+  description:
+    - "Map both Enroot's nvcr.io#... spelling and the recipe's nvcr.io/... spelling to the same prepared squash image."
+  pr-link: XXX
