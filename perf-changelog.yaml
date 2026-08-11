@@ -5794,3 +5794,10 @@
     - "Keep DSpark K=2 probabilistic throughput on synthetic golden AL 2.51 while the generated EVAL_ONLY row uses real block verification"
     - "Cap the GPU-resident search at concurrency 8 after concurrency 16 failed to complete deterministic warmup; retain concurrency 16 for the DRAM-offload capacity tier"
   pr-link: https://github.com/SemiAnalysisAI/InferenceX/pull/2476
+
+- config-keys:
+    - dsv4-fp4-gb300-dynamo-trt
+  description:
+    - "Allow the existing GB300 launcher to take Slurm account, partition, shared cache, squash, and pre-staged model paths from the runner environment while preserving every official default."
+    - "Add a non-benchmark preflight workflow for validating Slurm submission and shared model/cache visibility before dispatching the existing InferenceX end-to-end workflow on an NKX GB300 runner."
+  pr-link: XXX

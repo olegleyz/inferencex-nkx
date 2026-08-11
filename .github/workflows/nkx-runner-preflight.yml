@@ -1,0 +1,39 @@
+name: NKX GB300 runner preflight
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    runs-on: [self-hosted, gb300-nv]
+    timeout-minutes: 10
+    steps:
+      - name: Validate Slurm and shared storage
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          : "${SLURM_ACCOUNT:?runner environment must set SLURM_ACCOUNT}"
+          : "${SLURM_PARTITION:?runner environment must set SLURM_PARTITION}"
+          : "${MODEL_PATH_OVERRIDE:?runner environment must set MODEL_PATH_OVERRIDE}"
+          : "${INFERENCEX_CACHE_ROOT:?runner environment must set INFERENCEX_CACHE_ROOT}"
+
+          test "$(uname -m)" = "x86_64"
+          command -v squeue
+          command -v srun
+          command -v sbatch
+          test -r "${MODEL_PATH_OVERRIDE}/config.json"
+          test -d "${INFERENCEX_CACHE_ROOT}"
+
+          squeue --me
+          srun \
+            --account="${SLURM_ACCOUNT}" \
+            --partition="${SLURM_PARTITION}" \
+            --nodes=1 \
+            --ntasks=1 \
+            --time=00:02:00 \
+            --export=ALL \
+            bash -lc 'test -r "${MODEL_PATH_OVERRIDE}/config.json"; test -d "${INFERENCEX_CACHE_ROOT}"; hostname'

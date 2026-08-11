@@ -4,9 +4,13 @@
 
 set -exo pipefail
 
-export SLURM_PARTITION="batch_1"
-export SLURM_ACCOUNT="benchmark"
+export SLURM_PARTITION="${SLURM_PARTITION:-batch_1}"
+export SLURM_ACCOUNT="${SLURM_ACCOUNT:-benchmark}"
 export ENROOT_ROOTFS_WRITABLE=1
+
+# The official runner uses /data/home/sa-shared/gharunners. Other GB300
+# clusters can override the shared root without changing benchmark recipes.
+export INFERENCEX_CACHE_ROOT="${INFERENCEX_CACHE_ROOT:-/data/home/sa-shared/gharunners}"
 
 # Host-side directory holding aiperf's content-addressed dataset mmap cache.
 # Bind-mounted into worker containers at /aiperf_mmap_cache via the
@@ -15,10 +19,9 @@ export ENROOT_ROOTFS_WRITABLE=1
 # Without it, every run re-tokenizes and re-writes ~65 GB of mmap files
 # per dataset on first use. 777 mode so all gharunner_X SLURM users can
 # write to it.
-export AIPERF_MMAP_CACHE_HOST_PATH="/data/home/sa-shared/gharunners/ai-perf-cache"
+export AIPERF_MMAP_CACHE_HOST_PATH="${AIPERF_MMAP_CACHE_HOST_PATH:-${INFERENCEX_CACHE_ROOT}/ai-perf-cache}"
 
-export HF_HUB_CACHE_HOST_PATH="/data/home/sa-shared/gharunners/hf-hub-cache"
-mkdir -p "$HF_HUB_CACHE_HOST_PATH"
+export HF_HUB_CACHE_HOST_PATH="${HF_HUB_CACHE_HOST_PATH:-${INFERENCEX_CACHE_ROOT}/hf-hub-cache}"
 
 # Persistent dynamo source-build cache. srtctl's hash-pinned dynamo install
 # (_hash_cached_source_install) caches the built wheel + src tarball at
@@ -28,8 +31,7 @@ mkdir -p "$HF_HUB_CACHE_HOST_PATH"
 # root, which the non-root server containers can't do), so persist and share
 # the cache across jobs by bind-mounting this host dir at /configs/dynamo-wheels.
 # Seed it once with a --container-remap-root build. 777 for multi-user runners.
-export DYNAMO_WHEELS_CACHE_HOST_PATH="/data/home/sa-shared/gharunners/dynamo-wheels"
-mkdir -p "$DYNAMO_WHEELS_CACHE_HOST_PATH"
+export DYNAMO_WHEELS_CACHE_HOST_PATH="${DYNAMO_WHEELS_CACHE_HOST_PATH:-${INFERENCEX_CACHE_ROOT}/dynamo-wheels}"
 
 export MODEL_PATH=$MODEL
 
@@ -95,6 +97,11 @@ else
     exit 1
 fi
 
+# Model provisioning is external to InferenceX. Preserve the official model
+# mapping by default while allowing another GB300 runner to expose the same
+# model from its own shared storage.
+export MODEL_PATH="${MODEL_PATH_OVERRIDE:-$MODEL_PATH}"
+
 NGINX_IMAGE="nginx:1.27.4"
 
 # Squash files live on the Vast NFS storage; use the /data/ mount
@@ -103,8 +110,14 @@ NGINX_IMAGE="nginx:1.27.4"
 # symbolic links" bug from workflow worker NFS sessions on lockfiles
 # AND data files. /data/ has a separate NFS client cache that isn't
 # poisoned. See feedback_gb300_nfs_eloop_workaround for diagnosis.
-SQUASH_FILE="/data/home/sa-shared/gharunners/squash/$(echo "$IMAGE" | sed 's/[\/:@#]/_/g').sqsh"
-NGINX_SQUASH_FILE="/data/home/sa-shared/gharunners/squash/$(echo "$NGINX_IMAGE" | sed 's/[\/:@#]/_/g').sqsh"
+SQUASH_DIR="${SQUASH_DIR:-${INFERENCEX_CACHE_ROOT}/squash}"
+mkdir -p \
+    "$AIPERF_MMAP_CACHE_HOST_PATH" \
+    "$HF_HUB_CACHE_HOST_PATH" \
+    "$DYNAMO_WHEELS_CACHE_HOST_PATH" \
+    "$SQUASH_DIR"
+SQUASH_FILE="${SQUASH_DIR}/$(echo "$IMAGE" | sed 's/[\/:@#]/_/g').sqsh"
+NGINX_SQUASH_FILE="${SQUASH_DIR}/$(echo "$NGINX_IMAGE" | sed 's/[\/:@#]/_/g').sqsh"
 
 # Run the import on a compute node via srun, not on the login node:
 # the login node is x86_64 while the compute nodes are aarch64, so the
@@ -112,7 +125,7 @@ NGINX_SQUASH_FILE="/data/home/sa-shared/gharunners/squash/$(echo "$NGINX_IMAGE" 
 import_squash() {
     local squash="$1" image="$2"
     local lock="${squash}.lock"
-    srun --partition=$SLURM_PARTITION --exclusive --time=180 bash -c "
+    srun --partition="$SLURM_PARTITION" --account="$SLURM_ACCOUNT" --exclusive --time=180 bash -c "
         exec 9>\"$lock\"
         flock -w 600 9 || { echo 'Failed to acquire lock for $squash' >&2; exit 1; }
         if unsquashfs -l \"$squash\" > /dev/null 2>&1; then
@@ -162,14 +175,14 @@ POWER_SRT_SLURM_PIN="6fc1bed01a0b82dae0088a105c03ce0cfb353443"
 
 if [[ "$USES_DCGM_POWER" == "1" ]]; then
     DCGM_EXPORTER_IMAGE="nvcr.io/nvidia/k8s/dcgm-exporter:4.6.0-4.8.3-distroless"
-    DCGM_EXPORTER_SQSH="/data/home/sa-shared/gharunners/squash/$(echo "$DCGM_EXPORTER_IMAGE" | sed 's/[\/:@#]/_/g').sqsh"
+    DCGM_EXPORTER_SQSH="${SQUASH_DIR}/$(echo "$DCGM_EXPORTER_IMAGE" | sed 's/[\/:@#]/_/g').sqsh"
     # Note (wenyao): import_squash treats an existing unsquashfs-valid file
     # as a cache hit but does not re-validate a fresh import, so check
     # explicitly — on a compute node, like the import itself (login node is
     # x86, nodes aarch64).
     import_squash "$DCGM_EXPORTER_SQSH" "$DCGM_EXPORTER_IMAGE"
     test -r "$DCGM_EXPORTER_SQSH" || { echo "Error: DCGM exporter squash not readable: $DCGM_EXPORTER_SQSH" >&2; exit 1; }
-    srun --partition=$SLURM_PARTITION --exclusive --time=30 bash -c "unsquashfs -l \"$DCGM_EXPORTER_SQSH\" > /dev/null" || { echo "Error: DCGM exporter squash invalid: $DCGM_EXPORTER_SQSH" >&2; exit 1; }
+    srun --partition="$SLURM_PARTITION" --account="$SLURM_ACCOUNT" --exclusive --time=30 bash -c "unsquashfs -l \"$DCGM_EXPORTER_SQSH\" > /dev/null" || { echo "Error: DCGM exporter squash invalid: $DCGM_EXPORTER_SQSH" >&2; exit 1; }
     sha256sum "$DCGM_EXPORTER_SQSH" > "$GITHUB_WORKSPACE/exporter-image.sha256"
 fi
 

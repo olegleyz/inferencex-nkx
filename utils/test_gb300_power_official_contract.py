@@ -1,8 +1,8 @@
 """Static contract for the official GB300 dcgm-power lane.
 
-Shares helpers with the GB200 contract; GB300 specifics are the literal
-shared squash cache path (no SQUASH_DIR var in this launcher), the 19401
-exporter port, and the preserved v1.0.25/sa-submission non-power refs.
+Shares helpers with the GB200 contract; GB300 specifics are the default shared
+squash cache path, the 19401 exporter port, and the preserved
+v1.0.25/sa-submission non-power refs.
 """
 
 import yaml
@@ -42,9 +42,17 @@ def test_launcher_detects_power_lane_from_recipe():
 def test_launcher_provisions_exporter_through_shared_squash_path():
     launcher = LAUNCHER_PATH.read_text()
     assert_exporter_provisioning(launcher)
-    # No SQUASH_DIR var here; the /data/ mount avoids the /home NFS ELOOP bug.
-    assert 'DCGM_EXPORTER_SQSH="/data/home/sa-shared/gharunners/squash/' in launcher
-    assert 'srun --partition=$SLURM_PARTITION --exclusive --time=30 bash -c "unsquashfs -l' in launcher
+    assert 'INFERENCEX_CACHE_ROOT:-/data/home/sa-shared/gharunners' in launcher
+    assert 'DCGM_EXPORTER_SQSH="${SQUASH_DIR}/' in launcher
+    assert 'srun --partition="$SLURM_PARTITION" --account="$SLURM_ACCOUNT" --exclusive --time=30' in launcher
+
+
+def test_launcher_preserves_official_cluster_defaults_with_optional_overrides():
+    launcher = LAUNCHER_PATH.read_text()
+    assert 'SLURM_PARTITION:-batch_1' in launcher
+    assert 'SLURM_ACCOUNT:-benchmark' in launcher
+    assert 'MODEL_PATH_OVERRIDE:-$MODEL_PATH' in launcher
+    assert 'SQUASH_DIR:-${INFERENCEX_CACHE_ROOT}/squash' in launcher
 
 
 def test_launcher_pins_power_producer():
