@@ -62,25 +62,6 @@ def test_launcher_maps_registry_and_enroot_spellings_to_the_same_squash():
     assert "${REGISTRY_IMAGE_ALIAS}" in launcher
 
 
-def test_launcher_derives_mount_compatible_image_for_older_pyxis():
-    launcher = LAUNCHER_PATH.read_text()
-    assert 'derived_squash="${source_squash%.sqsh}-srt-mounts-v1.sqsh"' in launcher
-    assert 'mount_tree=$(mktemp -d "${SQUASH_DIR}/.srt-mounts.XXXXXX")' in launcher
-    for mount_target in (
-        "logs",
-        "model",
-        "configs",
-        "srtctl-benchmarks",
-        "aiperf_mmap_cache",
-        "hf_hub_cache",
-        "infmax-workspace",
-        "host-tmp",
-    ):
-        assert f'"$mount_tree/{mount_target}"' in launcher
-    assert 'touch "$mount_tree/tmp/setup_head.py"' in launcher
-    assert 'mksquashfs "$mount_tree" "$staging" -quiet' in launcher
-
-
 def test_launcher_pins_power_producer():
     assert_pinned_clone_contract(LAUNCHER_PATH.read_text())
 

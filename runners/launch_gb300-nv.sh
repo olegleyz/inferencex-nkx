@@ -140,46 +140,6 @@ import_squash() {
 import_squash "$SQUASH_FILE" "$IMAGE"
 import_squash "$NGINX_SQUASH_FILE" "$NGINX_IMAGE"
 
-# NKX currently ships an older Pyxis that does not create missing bind-mount
-# destinations. Preserve the imported image byte-for-byte and append only the
-# empty directories/files that srt-slurm mounts at runtime. The derived image
-# is cache-local and reused by subsequent jobs.
-prepare_srt_mount_image() {
-    local source_squash="$1"
-    local derived_squash="${source_squash%.sqsh}-srt-mounts-v1.sqsh"
-    local lock="${derived_squash}.lock"
-
-    exec 8>"$lock"
-    flock -w 600 8 || { echo "Failed to acquire lock for $derived_squash" >&2; exit 1; }
-    if unsquashfs -ll "$derived_squash" 2>/dev/null | grep -q 'squashfs-root/infmax-workspace$'; then
-        SQUASH_FILE="$derived_squash"
-        return
-    fi
-
-    local staging
-    local mount_tree
-    staging="${derived_squash}.tmp.$$"
-    mount_tree=$(mktemp -d "${SQUASH_DIR}/.srt-mounts.XXXXXX")
-    mkdir -p \
-        "$mount_tree/logs" \
-        "$mount_tree/model" \
-        "$mount_tree/configs" \
-        "$mount_tree/srtctl-benchmarks" \
-        "$mount_tree/aiperf_mmap_cache" \
-        "$mount_tree/hf_hub_cache" \
-        "$mount_tree/infmax-workspace" \
-        "$mount_tree/host-tmp" \
-        "$mount_tree/tmp"
-    touch "$mount_tree/tmp/setup_head.py"
-    cp --reflink=auto --sparse=always "$source_squash" "$staging"
-    mksquashfs "$mount_tree" "$staging" -quiet
-    mv "$staging" "$derived_squash"
-    rm -rf -- "$mount_tree"
-    SQUASH_FILE="$derived_squash"
-}
-
-prepare_srt_mount_image "$SQUASH_FILE"
-
 # Power lane detection: a recipe opts in via an enabled dcgm-power telemetry
 # block. CONFIG_FILE is srt-slurm-relative; resolve it against the workspace
 # recipe mirror (the same tree the clone step overlays), since the checkout
