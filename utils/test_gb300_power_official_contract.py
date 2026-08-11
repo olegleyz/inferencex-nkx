@@ -71,3 +71,13 @@ def test_launcher_supplies_arm64_uv_to_older_srt_slurm_jobs():
     assert "uv-aarch64-unknown-linux-gnu.tar.gz" in launcher
     assert "file \"$SRT_REPO_DIR/bin/uv\" | grep -q 'ARM aarch64'" in launcher
     assert "export PATH=\"${SRTCTL_SOURCE}/bin:$PATH\"" in launcher
+    assert 'export UV_PROJECT_ENVIRONMENT="${SRTCTL_SOURCE}/.venv-compute"' in launcher
+    assert "uv run --python 3.12 --no-dev --no-sync -m" in launcher
+
+
+def test_launcher_prefetches_arm64_compute_environment_on_login_node():
+    launcher = LAUNCHER_PATH.read_text()
+    assert 'SRT_NEEDS_COMPUTE_ENV_PREFETCH=1' in launcher
+    assert 'UV_PROJECT_ENVIRONMENT="$SRT_REPO_DIR/.venv-compute"' in launcher
+    assert "uv sync --python /usr/bin/python3.12" in launcher
+    assert "--python-platform aarch64-unknown-linux-gnu --no-dev" in launcher

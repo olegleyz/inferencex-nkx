@@ -353,6 +353,7 @@ export PATH="$UV_INSTALL_DIR:$PATH"
 # binary inherited from the runner cannot execute inside the Slurm job. Keep
 # the pinned revision, but give its generated job script an aarch64 uv binary.
 SRT_JOB_TEMPLATE="$SRT_REPO_DIR/src/srtctl/templates/job_script_minimal.j2"
+SRT_NEEDS_COMPUTE_ENV_PREFETCH=0
 if ! grep -q 'SRTCTL_SOURCE}/bin' "$SRT_JOB_TEMPLATE"; then
     UV_VERSION=$(uv --version | awk '{print $2}')
     mkdir -p "$SRT_REPO_DIR/bin"
@@ -364,8 +365,16 @@ if ! grep -q 'SRTCTL_SOURCE}/bin' "$SRT_JOB_TEMPLATE"; then
         echo "Error: downloaded compute-node uv is not aarch64" >&2
         exit 1
     }
-    sed -i '/# Install uv if not present/i export PATH="${SRTCTL_SOURCE}/bin:$PATH"\n' \
+    sed -i '/# Install uv if not present/i export PATH="${SRTCTL_SOURCE}/bin:$PATH"\nexport UV_PROJECT_ENVIRONMENT="${SRTCTL_SOURCE}/.venv-compute"\n' \
         "$SRT_JOB_TEMPLATE"
+    sed -i \
+        's/uv run --python 3.12 --no-dev -m /uv run --python 3.12 --no-dev --no-sync -m /' \
+        "$SRT_JOB_TEMPLATE"
+    grep -q 'uv run --python 3.12 --no-dev --no-sync -m ' "$SRT_JOB_TEMPLATE" || {
+        echo "Error: failed to disable compute-node dependency sync" >&2
+        exit 1
+    }
+    SRT_NEEDS_COMPUTE_ENV_PREFETCH=1
 fi
 
 VENV_DIR="${GITHUB_WORKSPACE}/.venv-srt-${GITHUB_RUN_ID:-manual}-${GITHUB_RUN_ATTEMPT:-0}-${RUN_KEY}"
@@ -439,6 +448,13 @@ cat srtslurm.yaml
 
 echo "Running make setup..."
 make setup ARCH=aarch64
+
+if [[ "$SRT_NEEDS_COMPUTE_ENV_PREFETCH" == "1" ]]; then
+    echo "Preparing the aarch64 srtctl environment on the egress-capable login node..."
+    UV_PROJECT_ENVIRONMENT="$SRT_REPO_DIR/.venv-compute" \
+        uv sync --python /usr/bin/python3.12 \
+        --python-platform aarch64-unknown-linux-gnu --no-dev
+fi
 
 # Export eval-related env vars for srt-slurm post-benchmark eval
 export INFMAX_WORKSPACE="$GITHUB_WORKSPACE"
