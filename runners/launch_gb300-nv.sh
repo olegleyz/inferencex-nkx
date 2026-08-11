@@ -348,6 +348,26 @@ export UV_INSTALL_DIR="$GITHUB_WORKSPACE/.local/bin"
 curl -LsSf https://astral.sh/uv/install.sh | sh
 export PATH="$UV_INSTALL_DIR:$PATH"
 
+# Some pinned srt-slurm revisions predate target-architecture uv setup. The
+# GitHub runner may be x86_64 while GB300 compute nodes are aarch64, so an uv
+# binary inherited from the runner cannot execute inside the Slurm job. Keep
+# the pinned revision, but give its generated job script an aarch64 uv binary.
+SRT_JOB_TEMPLATE="$SRT_REPO_DIR/src/srtctl/templates/job_script_minimal.j2"
+if ! grep -q 'SRTCTL_SOURCE}/bin' "$SRT_JOB_TEMPLATE"; then
+    UV_VERSION=$(uv --version | awk '{print $2}')
+    mkdir -p "$SRT_REPO_DIR/bin"
+    curl -LsSf \
+        "https://github.com/astral-sh/uv/releases/download/${UV_VERSION}/uv-aarch64-unknown-linux-gnu.tar.gz" | \
+        tar -xz --strip-components=1 -C "$SRT_REPO_DIR/bin"
+    chmod +x "$SRT_REPO_DIR/bin/uv" "$SRT_REPO_DIR/bin/uvx"
+    file "$SRT_REPO_DIR/bin/uv" | grep -q 'ARM aarch64' || {
+        echo "Error: downloaded compute-node uv is not aarch64" >&2
+        exit 1
+    }
+    sed -i '/# Install uv if not present/i export PATH="${SRTCTL_SOURCE}/bin:$PATH"\n' \
+        "$SRT_JOB_TEMPLATE"
+fi
+
 VENV_DIR="${GITHUB_WORKSPACE}/.venv-srt-${GITHUB_RUN_ID:-manual}-${GITHUB_RUN_ATTEMPT:-0}-${RUN_KEY}"
 rm -rf "$VENV_DIR"
 # --seed installs pip+setuptools+wheel into the venv. Without it, the

@@ -64,3 +64,10 @@ def test_non_power_lane_keeps_existing_ref_logic():
     assert 'git clone https://github.com/NVIDIA/srt-slurm.git "$SRT_REPO_DIR"' in launcher
     assert "git checkout v1.0.25" in launcher
     assert "git checkout sa-submission-q2-2026" in launcher
+
+
+def test_launcher_supplies_arm64_uv_to_older_srt_slurm_jobs():
+    launcher = LAUNCHER_PATH.read_text()
+    assert "uv-aarch64-unknown-linux-gnu.tar.gz" in launcher
+    assert "file \"$SRT_REPO_DIR/bin/uv\" | grep -q 'ARM aarch64'" in launcher
+    assert "export PATH=\"${SRTCTL_SOURCE}/bin:$PATH\"" in launcher
