@@ -208,6 +208,21 @@ on:
         required: false
         type: string
         default: ""
+      model-stage-result-file:
+        description: "Committed ready BenchOps ModelStage receipt; skips staging"
+        required: false
+        type: string
+        default: ""
+      cluster-profile:
+        description: "Explicit launcher cluster profile"
+        required: false
+        type: string
+        default: ""
+      readiness-only:
+        description: "Use one formal request after native serving readiness"
+        required: false
+        type: boolean
+        default: false
 
 env:
   RANDOM_RANGE_RATIO: 0.8
@@ -246,6 +261,8 @@ env:
   ROUTER_METADATA: ${{ inputs.router }}
   KV_P2P_TRANSFER: ${{ inputs.kv-p2p-transfer }}
   TOTAL_CPU_DRAM_GB: ${{ inputs.total-cpu-dram-gb }}
+  INFERENCEX_CLUSTER_PROFILE: ${{ inputs.cluster-profile }}
+  INFERENCEX_READINESS_ONLY: ${{ inputs.readiness-only && '1' || '0' }}
   PYTHONDONTWRITEBYTECODE: '1'
   PYTHONPYCACHEPREFIX: /tmp/inferencex-pycache
 
@@ -325,6 +342,7 @@ jobs:
         if: ${{ inputs.model-stage-file != '' }}
         run: |
           set -euo pipefail
+          test -z "${{ inputs.model-stage-result-file }}"
           test -n "${{ inputs.benchops-repository }}"
           [[ "${{ inputs.benchops-ref }}" =~ ^[0-9a-f]{40}$ ]]
           test -n "${{ inputs.benchops-config-root }}"
@@ -340,6 +358,37 @@ jobs:
           path: .benchops-source
           clean: false
           persist-credentials: false
+
+      - name: Validate existing model staging receipt
+        if: ${{ inputs.model-stage-result-file != '' }}
+        run: |
+          set -euo pipefail
+          test -z "${{ inputs.model-stage-file }}"
+          test -f "${{ inputs.model-stage-result-file }}"
+          cp "${{ inputs.model-stage-result-file }}" model-stage-result.json
+          jq -e '
+            .state == "ready" and
+            .clusterId == "nkx-slinky-gb300-dev-01" and
+            .model.repository == "deepseek-ai/DeepSeek-V4-Pro" and
+            .model.revision == "b5968e9190ef611bbf34a7229255be88a0e937c1" and
+            .nodes.required == 16 and
+            .nodes.verified == 16 and
+            ([.nodes.results[].node] | length) == 16 and
+            ([.nodes.results[].node] | unique | length) == 16 and
+            ([.nodes.results[].state] | all(. == "copied" or . == "reused")) and
+            .manifestDigest == "sha256:5c7c518159b3c7d0780d947846669693b16fe79f114b2010dd29769647eaa40d" and
+            .sharedPath == "/scratch/fsw/users/oleizerov/models/DeepSeek-V4-Pro-b5968e9190ef" and
+            .localPath == "/scratch/models/DeepSeek-V4-Pro-b5968e9190ef"
+          ' model-stage-result.json
+          shared_path="$(jq -er '.sharedPath' model-stage-result.json)"
+          model_path_override="$(jq -er '.localPath' model-stage-result.json)"
+          manifest_digest="$(jq -er '.manifestDigest' model-stage-result.json)"
+          cp "$shared_path/.benchops-model-manifest.json" \
+            model-stage-shared-manifest.json
+          test "$(jq -r '.manifestDigest' model-stage-shared-manifest.json)" = \
+            "$manifest_digest"
+          printf 'MODEL_PATH_OVERRIDE=%s\n' "$model_path_override" >> "$GITHUB_ENV"
+          printf 'MODEL_STAGE_MANIFEST_DIGEST=%s\n' "$manifest_digest" >> "$GITHUB_ENV"
 
       - name: Stage and verify pinned model
         if: ${{ inputs.model-stage-file != '' }}
@@ -367,12 +416,13 @@ jobs:
           printf 'MODEL_PATH_OVERRIDE=%s\n' "$model_path_override" >> "$GITHUB_ENV"
 
       - name: Upload model staging provenance
-        if: ${{ always() && inputs.model-stage-file != '' }}
+        if: ${{ always() && (inputs.model-stage-file != '' || inputs.model-stage-result-file != '') }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: model_stage_${{ inputs.exp-name }}_${{ github.run_attempt }}
           path: |
             ${{ inputs.model-stage-file }}
+            ${{ inputs.model-stage-result-file }}
             model-stage-result.json
             model-stage-shared-manifest.json
             model-stage-record/**
@@ -473,11 +523,13 @@ jobs:
           if-no-files-found: ignore
 
       - name: Upload resolved srt-slurm configuration
-        if: ${{ always() && inputs.model-stage-file != '' }}
+        if: ${{ always() && (inputs.model-stage-file != '' || inputs.model-stage-result-file != '') }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: model_stage_runtime_${{ inputs.exp-name }}_${{ github.run_attempt }}
-          path: srtslurm.yaml
+          path: |
+            srtslurm.yaml
+            srt-slurm-runtime/**
           if-no-files-found: warn
 
       - name: Upload agentic aggregated result

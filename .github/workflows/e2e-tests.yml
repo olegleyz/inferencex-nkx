@@ -95,6 +95,21 @@ on:
                 required: false
                 type: string
                 default: ""
+            model-stage-result-file:
+                description: "Committed ready BenchOps ModelStage receipt (optional)"
+                required: false
+                type: string
+                default: ""
+            cluster-profile:
+                description: "Explicit launcher cluster profile (optional)"
+                required: false
+                type: string
+                default: ""
+            readiness-only:
+                description: "Use one formal request after native serving readiness"
+                required: false
+                type: boolean
+                default: false
     workflow_call:
         inputs:
             generate-cli-command:
@@ -130,6 +145,21 @@ on:
                 required: false
                 type: string
                 default: ""
+            model-stage-result-file:
+                description: "Committed ready BenchOps ModelStage receipt (optional)"
+                required: false
+                type: string
+                default: ""
+            cluster-profile:
+                description: "Explicit launcher cluster profile (optional)"
+                required: false
+                type: string
+                default: ""
+            readiness-only:
+                description: "Use one formal request after native serving readiness"
+                required: false
+                type: boolean
+                default: false
             duration-override:
                 description: "Override matrix.config.duration (seconds). Empty = use matrix value."
                 required: false
@@ -345,6 +375,9 @@ jobs:
             benchops-repository: ${{ inputs.benchops-repository }}
             benchops-ref: ${{ inputs.benchops-ref }}
             benchops-config-root: ${{ inputs.benchops-config-root }}
+            model-stage-result-file: ${{ inputs.model-stage-result-file }}
+            cluster-profile: ${{ inputs.cluster-profile }}
+            readiness-only: ${{ inputs.readiness-only }}
 
     test-sweep-multi-node-evals:
         needs: get-jobs
@@ -402,6 +435,9 @@ jobs:
             benchops-repository: ${{ inputs.benchops-repository }}
             benchops-ref: ${{ inputs.benchops-ref }}
             benchops-config-root: ${{ inputs.benchops-config-root }}
+            model-stage-result-file: ${{ inputs.model-stage-result-file }}
+            cluster-profile: ${{ inputs.cluster-profile }}
+            readiness-only: ${{ inputs.readiness-only }}
 
     test-sweep-agentic:
         needs: get-jobs
@@ -547,6 +583,9 @@ jobs:
             benchops-repository: ${{ inputs.benchops-repository }}
             benchops-ref: ${{ inputs.benchops-ref }}
             benchops-config-root: ${{ inputs.benchops-config-root }}
+            model-stage-result-file: ${{ inputs.model-stage-result-file }}
+            cluster-profile: ${{ inputs.cluster-profile }}
+            readiness-only: ${{ inputs.readiness-only }}
 
     test-sweep-single-node:
         needs: get-jobs

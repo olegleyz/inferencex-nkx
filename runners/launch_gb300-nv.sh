@@ -4,8 +4,20 @@
 
 set -exo pipefail
 
-export SLURM_PARTITION="batch_1"
-export SLURM_ACCOUNT="benchmark"
+case "${INFERENCEX_CLUSTER_PROFILE:-}" in
+    "") ;;
+    nkx-gb300)
+        # shellcheck source=runners/cluster_profiles/nkx-gb300.sh
+        source "${GITHUB_WORKSPACE}/runners/cluster_profiles/nkx-gb300.sh"
+        ;;
+    *)
+        echo "Unsupported InferenceX cluster profile: ${INFERENCEX_CLUSTER_PROFILE}" >&2
+        exit 1
+        ;;
+esac
+
+export SLURM_PARTITION="${SLURM_PARTITION:-batch_1}"
+export SLURM_ACCOUNT="${SLURM_ACCOUNT:-benchmark}"
 export ENROOT_ROOTFS_WRITABLE=1
 
 # Host-side directory holding aiperf's content-addressed dataset mmap cache.
@@ -15,9 +27,9 @@ export ENROOT_ROOTFS_WRITABLE=1
 # Without it, every run re-tokenizes and re-writes ~65 GB of mmap files
 # per dataset on first use. 777 mode so all gharunner_X SLURM users can
 # write to it.
-export AIPERF_MMAP_CACHE_HOST_PATH="/data/home/sa-shared/gharunners/ai-perf-cache"
+export AIPERF_MMAP_CACHE_HOST_PATH="${AIPERF_MMAP_CACHE_HOST_PATH:-/data/home/sa-shared/gharunners/ai-perf-cache}"
 
-export HF_HUB_CACHE_HOST_PATH="/data/home/sa-shared/gharunners/hf-hub-cache"
+export HF_HUB_CACHE_HOST_PATH="${HF_HUB_CACHE_HOST_PATH:-/data/home/sa-shared/gharunners/hf-hub-cache}"
 mkdir -p "$HF_HUB_CACHE_HOST_PATH"
 
 # Persistent dynamo source-build cache. srtctl's hash-pinned dynamo install
@@ -28,7 +40,7 @@ mkdir -p "$HF_HUB_CACHE_HOST_PATH"
 # root, which the non-root server containers can't do), so persist and share
 # the cache across jobs by bind-mounting this host dir at /configs/dynamo-wheels.
 # Seed it once with a --container-remap-root build. 777 for multi-user runners.
-export DYNAMO_WHEELS_CACHE_HOST_PATH="/data/home/sa-shared/gharunners/dynamo-wheels"
+export DYNAMO_WHEELS_CACHE_HOST_PATH="${DYNAMO_WHEELS_CACHE_HOST_PATH:-/data/home/sa-shared/gharunners/dynamo-wheels}"
 mkdir -p "$DYNAMO_WHEELS_CACHE_HOST_PATH"
 
 export MODEL_PATH=$MODEL
@@ -99,6 +111,31 @@ fi
 # path. Preserve every existing model default when no override is supplied.
 export MODEL_PATH="${MODEL_PATH_OVERRIDE:-$MODEL_PATH}"
 
+# A ready receipt is immutable evidence that BenchOps staged the pinned model.
+# Immediately before launch, independently perform its read-only marker,
+# manifest, and file-size checks on every exact worker named in that receipt.
+if [[ -n "${MODEL_PATH_OVERRIDE:-}" ]]; then
+    MODEL_STAGE_RECEIPT="${GITHUB_WORKSPACE}/model-stage-result.json"
+    test -f "$MODEL_STAGE_RECEIPT"
+    mapfile -t MODEL_STAGE_NODES < <(
+        jq -er '.nodes.results[].node' "$MODEL_STAGE_RECEIPT"
+    )
+    test "${#MODEL_STAGE_NODES[@]}" -gt 0
+    MODEL_STAGE_NODELIST="$(IFS=,; echo "${MODEL_STAGE_NODES[*]}")"
+    srun \
+        --partition="$SLURM_PARTITION" \
+        --account="$SLURM_ACCOUNT" \
+        --nodes="${#MODEL_STAGE_NODES[@]}" \
+        --ntasks="${#MODEL_STAGE_NODES[@]}" \
+        --ntasks-per-node=1 \
+        --gpus-per-node=1 \
+        --nodelist="$MODEL_STAGE_NODELIST" \
+        --exclusive \
+        --time=30 \
+        python3 "${GITHUB_WORKSPACE}/runners/verify_model_stage.py" \
+            --receipt "$MODEL_STAGE_RECEIPT"
+fi
+
 NGINX_IMAGE="nginx:1.27.4"
 
 # Squash files live on the Vast NFS storage; use the /data/ mount
@@ -107,16 +144,18 @@ NGINX_IMAGE="nginx:1.27.4"
 # symbolic links" bug from workflow worker NFS sessions on lockfiles
 # AND data files. /data/ has a separate NFS client cache that isn't
 # poisoned. See feedback_gb300_nfs_eloop_workaround for diagnosis.
-SQUASH_FILE="/data/home/sa-shared/gharunners/squash/$(echo "$IMAGE" | sed 's/[\/:@#]/_/g').sqsh"
-NGINX_SQUASH_FILE="/data/home/sa-shared/gharunners/squash/$(echo "$NGINX_IMAGE" | sed 's/[\/:@#]/_/g').sqsh"
+SQUASH_CACHE_HOST_PATH="${SQUASH_CACHE_HOST_PATH:-/data/home/sa-shared/gharunners/squash}"
+SQUASH_FILE="${SQUASH_CACHE_HOST_PATH}/$(echo "$IMAGE" | sed 's/[\/:@#]/_/g').sqsh"
+NGINX_SQUASH_FILE="${SQUASH_CACHE_HOST_PATH}/$(echo "$NGINX_IMAGE" | sed 's/[\/:@#]/_/g').sqsh"
 
 # Run the import on a compute node via srun, not on the login node:
 # the login node is x86_64 while the compute nodes are aarch64, so the
 # arm64 squash file has to be built on a compute node.
 import_squash() {
-    local squash="$1" image="$2"
+    local squash="$1" image="$2" expected_sha256="${3:-}"
     local lock="${squash}.lock"
-    srun --partition=$SLURM_PARTITION --exclusive --time=180 bash -c "
+    srun --partition="$SLURM_PARTITION" --account="$SLURM_ACCOUNT" \
+        --nodes=1 --ntasks=1 --gpus-per-node=1 --exclusive --time=180 bash -c "
         exec 9>\"$lock\"
         flock -w 600 9 || { echo 'Failed to acquire lock for $squash' >&2; exit 1; }
         if unsquashfs -l \"$squash\" > /dev/null 2>&1; then
@@ -125,11 +164,19 @@ import_squash() {
             rm -f \"$squash\"
             enroot import -o \"$squash\" docker://$image
         fi
+        if [ -n \"$expected_sha256\" ]; then
+            actual_sha256=\$(sha256sum \"$squash\" | awk '{print \$1}')
+            if [ \"\$actual_sha256\" != \"$expected_sha256\" ]; then
+                echo 'SquashFS checksum mismatch for $image' >&2
+                echo \"expected=$expected_sha256 actual=\$actual_sha256 path=$squash\" >&2
+                exit 1
+            fi
+        fi
     "
 }
 
-import_squash "$SQUASH_FILE" "$IMAGE"
-import_squash "$NGINX_SQUASH_FILE" "$NGINX_IMAGE"
+import_squash "$SQUASH_FILE" "$IMAGE" "${IMAGE_SQUASH_SHA256:-}"
+import_squash "$NGINX_SQUASH_FILE" "$NGINX_IMAGE" "${NGINX_SQUASH_SHA256:-}"
 
 export EVAL_ONLY="${EVAL_ONLY:-false}"
 
@@ -184,7 +231,7 @@ elif [[ "$IS_AGENTIC" == "1" ]]; then
 elif [[ $FRAMEWORK == "dynamo-vllm" && $MODEL_PREFIX == "dsv4" ]]; then
     git clone https://github.com/NVIDIA/srt-slurm.git "$SRT_REPO_DIR"
     cd "$SRT_REPO_DIR"
-    git checkout aflowers/gb200-dsv4-recipes
+    git checkout "${SRT_SLURM_DSV4_REF:-aflowers/gb200-dsv4-recipes}"
     mkdir -p recipes/vllm/deepseek-v4
     cp -rT "$GITHUB_WORKSPACE/benchmarks/multi_node/srt-slurm-recipes/vllm/deepseek-v4" recipes/vllm/deepseek-v4
 elif [[ $FRAMEWORK == "dynamo-sglang" && $MODEL_PREFIX == "glm5" ]]; then
@@ -281,6 +328,15 @@ echo "Configs available at: $SRT_REPO_DIR/"
 # Create srtslurm.yaml for srtctl (used by both frameworks)
 SRTCTL_ROOT="${SRT_REPO_DIR}"
 echo "Creating srtslurm.yaml configuration..."
+EXTRA_MOUNTS_YAML=""
+if [[ -n "${SRT_SLURM_HOME_PATH:-}" ]]; then
+    printf -v EXTRA_MOUNTS_YAML '%s  "%s": "%s"\n' \
+        "$EXTRA_MOUNTS_YAML" "$SRT_SLURM_HOME_PATH" "$SRT_SLURM_HOME_PATH"
+fi
+if [[ -n "${SRT_SLURM_SHARED_ROOT:-}" ]]; then
+    printf -v EXTRA_MOUNTS_YAML '%s  "%s": "%s"\n' \
+        "$EXTRA_MOUNTS_YAML" "$SRT_SLURM_SHARED_ROOT" "$SRT_SLURM_SHARED_ROOT"
+fi
 cat > srtslurm.yaml <<EOF
 # SRT SLURM Configuration for GB300
 
@@ -301,7 +357,7 @@ srtctl_root: "${SRTCTL_ROOT}"
 # Used here for aiperf's persistent mmap cache so the dataset isn't
 # re-tokenized + re-written every job.
 default_mounts:
-  "${AIPERF_MMAP_CACHE_HOST_PATH}": "/aiperf_mmap_cache"
+${EXTRA_MOUNTS_YAML}  "${AIPERF_MMAP_CACHE_HOST_PATH}": "/aiperf_mmap_cache"
   "${HF_HUB_CACHE_HOST_PATH}": "/hf_hub_cache"
   # Warm dynamo source-build cache (nested over the auto /configs mount) so the
   # hash-pinned install is a cache hit (pip-only, no apt/root) on every job.
@@ -344,6 +400,59 @@ fi
 CONFIG_PATH="${CONFIG_FILE%%:*}"
 sed -i "s/^name:.*/name: \"${RUNNER_NAME}\"/" "$CONFIG_PATH"
 
+# Cluster profiles may add scheduler/runtime inputs to the resolved recipe.
+# This runs after the reviewed recipe is overlaid into the pinned srt-slurm
+# checkout, and the generated config and Slurm script remain native artifacts.
+if [[ -n "${SRT_SLURM_CPUS_PER_TASK:-}" || -n "${SRT_SLURM_ETCD_LEASE_TTL:-}" || -n "${SRT_SLURM_HEALTH_MAX_ATTEMPTS:-}" ]]; then
+    export CONFIG_PATH SRT_SLURM_CPUS_PER_TASK SRT_SLURM_ETCD_LEASE_TTL SRT_SLURM_HEALTH_MAX_ATTEMPTS
+    python - <<'PY'
+import os
+from pathlib import Path
+
+import yaml
+
+path = Path(os.environ["CONFIG_PATH"])
+document = yaml.safe_load(path.read_text())
+if not isinstance(document, dict):
+    raise RuntimeError("resolved InferenceX recipe must be a mapping")
+
+cpus = os.environ.get("SRT_SLURM_CPUS_PER_TASK")
+if cpus:
+    if not cpus.isdigit() or int(cpus) <= 0:
+        raise RuntimeError("SRT_SLURM_CPUS_PER_TASK must be a positive integer")
+    directives = document.setdefault("sbatch_directives", {})
+    existing = directives.get("cpus-per-task")
+    if existing not in (None, cpus, int(cpus)):
+        raise RuntimeError("reviewed recipe already defines a different cpus-per-task")
+    directives["cpus-per-task"] = cpus
+
+attempts = os.environ.get("SRT_SLURM_HEALTH_MAX_ATTEMPTS")
+if attempts:
+    if not attempts.isdigit() or int(attempts) <= 0:
+        raise RuntimeError("SRT_SLURM_HEALTH_MAX_ATTEMPTS must be a positive integer")
+    health = document.setdefault("health_check", {})
+    health["max_attempts"] = int(attempts)
+
+ttl = os.environ.get("SRT_SLURM_ETCD_LEASE_TTL")
+if ttl:
+    if not ttl.isdigit() or int(ttl) <= 0:
+        raise RuntimeError("SRT_SLURM_ETCD_LEASE_TTL must be a positive integer")
+    frontend = document.setdefault("frontend", {}).setdefault("env", {})
+    frontend["ETCD_LEASE_TTL"] = ttl
+    backend = document.setdefault("backend", {})
+    for key in ("prefill_environment", "decode_environment"):
+        backend.setdefault(key, {})["ETCD_LEASE_TTL"] = ttl
+
+if os.environ.get("INFERENCEX_READINESS_ONLY") == "1":
+    benchmark = document.setdefault("benchmark", {})
+    benchmark["concurrencies"] = "1"
+    benchmark["num_prompts_mult"] = 1
+    benchmark["num_warmup_mult"] = 0
+
+path.write_text(yaml.safe_dump(document, sort_keys=False))
+PY
+fi
+
 # --no-preflight skips srtctl's pre-submit model-path stat, which runs on
 # the GHA runner host (im-gb300-login-02, an x86 login node). It's required
 # whenever model.path resolves to the node-local /scratch NVMe that the login
@@ -361,7 +470,7 @@ SRTCTL_APPLY_ARGS=(
     -f "$CONFIG_FILE"
     --tags "gb300,${MODEL_PREFIX},${PRECISION},${ISL}x${OSL},infmax-$(date +%Y%m%d)"
 )
-if [[ "$IS_AGENTIC" == "1" || "$MODEL_PREFIX" == "glm5.1" || ( "$MODEL_PREFIX" == "qwen3.5" && "$PRECISION" == "fp8" ) ]]; then
+if [[ -n "${MODEL_PATH_OVERRIDE:-}" || "$IS_AGENTIC" == "1" || "$MODEL_PREFIX" == "glm5.1" || ( "$MODEL_PREFIX" == "qwen3.5" && "$PRECISION" == "fp8" ) ]]; then
     SRTCTL_APPLY_ARGS+=(--no-preflight)
 fi
 if [[ -n "$SRTCTL_SETUP_SCRIPT" ]]; then
@@ -403,6 +512,21 @@ _snapshot_server_logs() {
         # the whole script before either succeeds.
         cp -r "$LOGS_DIR" "$GITHUB_WORKSPACE/LOGS" 2>/dev/null || true
         tar czf "$GITHUB_WORKSPACE/multinode_server_logs.tar.gz" -C "$LOGS_DIR" . 2>/dev/null || true
+    fi
+    if [ -n "${GITHUB_WORKSPACE:-}" ]; then
+        runtime_dir="${GITHUB_WORKSPACE}/srt-slurm-runtime"
+        mkdir -p "$runtime_dir"
+        cp srtslurm.yaml "$runtime_dir/srtslurm.yaml" 2>/dev/null || true
+        cp "${CONFIG_PATH:-}" "$runtime_dir/effective-recipe.yaml" 2>/dev/null || true
+        cp "outputs/${JOB_ID:-}/config.yaml" "$runtime_dir/config.yaml" 2>/dev/null || true
+        cp "outputs/${JOB_ID:-}/sbatch_script.sh" "$runtime_dir/sbatch_script.sh" 2>/dev/null || true
+        git -C "${SRT_REPO_DIR:-.}" rev-parse HEAD > \
+            "$runtime_dir/srt-slurm-commit.txt" 2>/dev/null || true
+        git -C "$GITHUB_WORKSPACE" rev-parse HEAD > \
+            "$runtime_dir/inferencex-commit.txt" 2>/dev/null || true
+        env | LC_ALL=C sort | grep -E \
+            '^(AIPERF_|CUDA_|DYNAMO_|ENROOT_|HF_HUB_|IMAGE=|IMAGE_SQUASH_|INFERENCEX_|MODEL=|MODEL_PATH|NCCL_|NIXL_|NVSHMEM_|SLURM_|SQUASH_|SRT_|TORCH_|UCX_|VLLM_)' \
+            > "$runtime_dir/launcher-environment.txt" || true
     fi
 }
 trap _snapshot_server_logs EXIT

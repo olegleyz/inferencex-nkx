@@ -201,6 +201,23 @@ def component_metadata(benchmark: dict, config: dict) -> dict:
     return metadata
 
 
+def reviewed_recipe_path(benchmark: dict) -> str | None:
+    """Return the exact CONFIG_FILE selected by a multinode search point."""
+    paths = []
+    for role in (Fields.PREFILL.value, Fields.DECODE.value):
+        worker = benchmark.get(role, {})
+        for setting in worker.get(Fields.ADDITIONAL_SETTINGS.value, []):
+            if setting.startswith("CONFIG_FILE="):
+                paths.append(setting.removeprefix("CONFIG_FILE="))
+    unique_paths = list(dict.fromkeys(paths))
+    if len(unique_paths) > 1:
+        raise ValueError(
+            "multinode search point defines conflicting CONFIG_FILE settings: "
+            + ", ".join(unique_paths)
+        )
+    return unique_paths[0] if unique_paths else None
+
+
 def chunk_multinode_agentic_concurrencies(conc_values: list[int]) -> list[list[int]]:
     """Bound sequential agentic profiles sharing one server allocation."""
     size = MAX_MULTINODE_AGENTIC_CONCURRENCIES_PER_ALLOCATION
@@ -490,6 +507,9 @@ def generate_full_sweep(args, all_config_data, runner_data):
             bmk_space = seq_config[Fields.SEARCH_SPACE.value]
 
             for bmk in bmk_space:
+                requested_recipe = getattr(args, "config_file", None)
+                if requested_recipe and reviewed_recipe_path(bmk) != requested_recipe:
+                    continue
                 # Skip configs that don't match the requested node type
                 if is_multinode and not args.multi_node:
                     continue
@@ -704,6 +724,9 @@ def generate_full_sweep(args, all_config_data, runner_data):
             duration = DEFAULT_AGENTIC_DURATION_SECONDS
 
             for bmk in bmk_space:
+                requested_recipe = getattr(args, "config_file", None)
+                if requested_recipe and reviewed_recipe_path(bmk) != requested_recipe:
+                    continue
                 if is_multinode:
                     prefill = with_worker_parallelism_defaults(
                         bmk[Fields.PREFILL.value])
@@ -824,6 +847,10 @@ def generate_full_sweep(args, all_config_data, runner_data):
                             validate_agentic_matrix_entry(entry)
                             matrix_values.append(entry)
 
+    if getattr(args, "config_file", None) and not matrix_values:
+        raise ValueError(
+            f"No reviewed search point matched --config-file {args.config_file!r}"
+        )
     return matrix_values
 
 
@@ -1251,6 +1278,14 @@ def main():
         nargs='+',
         required=False,
         help='Runner type(s) to filter by (e.g., h200, h100) (optional, can specify multiple)'
+    )
+    full_sweep_parser.add_argument(
+        '--config-file',
+        required=False,
+        help=(
+            'Select the exact existing multinode CONFIG_FILE recipe path. '
+            'Fails when no reviewed search point matches.'
+        )
     )
     full_sweep_parser.add_argument(
         '--seq-lens',

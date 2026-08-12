@@ -1028,6 +1028,51 @@ class TestGenerateFullSweepMultiNode:
         )
         assert len(result) == 1  # One entry with conc-list
 
+    def test_exact_reviewed_recipe_filter(
+        self,
+        sample_multinode_config,
+        sample_runner_config,
+        full_sweep_args_multi_node,
+    ):
+        config = copy.deepcopy(sample_multinode_config)
+        search_space = config["dsr1-fp4-gb200-dynamo-trt"]["scenarios"][
+            "fixed-seq-len"
+        ][0]["search-space"]
+        search_space[0]["prefill"]["additional-settings"].append(
+            "CONFIG_FILE=recipes/reviewed-5p.yaml"
+        )
+        second = copy.deepcopy(search_space[0])
+        second["prefill"]["num-worker"] = 6
+        second["prefill"]["additional-settings"][-1] = (
+            "CONFIG_FILE=recipes/reviewed-6p.yaml"
+        )
+        search_space.append(second)
+        full_sweep_args_multi_node.config_file = "recipes/reviewed-6p.yaml"
+
+        result = generate_full_sweep(
+            full_sweep_args_multi_node,
+            config,
+            sample_runner_config,
+        )
+
+        assert len(result) == 1
+        assert result[0]["prefill"]["num-worker"] == 6
+
+    def test_exact_reviewed_recipe_filter_rejects_missing_match(
+        self,
+        sample_multinode_config,
+        sample_runner_config,
+        full_sweep_args_multi_node,
+    ):
+        full_sweep_args_multi_node.config_file = "recipes/not-reviewed.yaml"
+
+        with pytest.raises(ValueError, match="No reviewed search point matched"):
+            generate_full_sweep(
+                full_sweep_args_multi_node,
+                sample_multinode_config,
+                sample_runner_config,
+            )
+
     def test_multinode_entry_structure(self, sample_multinode_config, sample_runner_config, full_sweep_args_multi_node):
         """Multinode entries should have prefill and decode configs."""
         result = generate_full_sweep(
