@@ -2,6 +2,139 @@
 
 Guidance for AI agents working with InferenceX.
 
+## Local NKX/Lepton GB300 reproducibility project
+
+This worktree is the canonical local workspace for reproducing the existing
+GB300 benchmark results through InferenceX's normal recipes, `srt-slurm`,
+GitHub Actions, and result collection. It starts at InferenceX revision
+`d089a9138c53d16c6388e4251a078fee8ca7bea6`, the source revision recorded by
+the prior reviewed BenchOps matrices.
+
+### Objective
+
+Reproduce already-successful GB300 results with an execution path that peers
+can understand and rerun. Comparable throughput alone is insufficient. Every
+run must have a pushed source commit and preserve the resolved recipe,
+generated Slurm script, effective environment, image and model identity,
+source revisions, logs, and native InferenceX result artifacts.
+
+Stay as close as possible to upstream InferenceX and `srt-slurm`:
+
+- use the original checked-in recipe and launcher behavior first;
+- express unavoidable cluster differences as small, explicit,
+  source-controlled inputs or an NKX-specific adapter;
+- keep upstream container setup intact and make local setup additive;
+- do not hide fixes in interactive shell history, live cluster patches, or
+  unrecorded files on a login/compute node;
+- do not use BenchOps to submit these reproduction runs. BenchOps is the
+  evidence source for previously successful behavior and cluster adaptation.
+
+The first target is the known-good DeepSeek V4 Dynamo-vLLM path. Do not resume
+the paused Dynamo-TensorRT-LLM enablement while working on baseline
+reproduction unless the user explicitly changes the goal.
+
+### Clusters
+
+Both targets are AWS `us-east-2`, GB300, four GPUs per aarch64 compute node,
+ConnectX RoCE, Slurm-on-Kubernetes clusters. Kubernetes and Slurm access is
+through NVIDIA Teleport; authentication expires and must be refreshed by the
+user. Never confuse the contexts.
+
+| Purpose | BenchOps cluster ID | Kubernetes context | Slurm cluster | GPU partition | Node-local model root |
+| --- | --- | --- | --- | --- | --- |
+| NKX-managed Slurm | `nkx-slinky-gb300-dev-01` | `gb300` | `nkx-slinky-gb300-dev-01` | `gpu` | `/scratch/benchops-$(id -un)/models` |
+| Lepton-managed Slurm on NKX EKS | `nkx-slinky-lepton-gb300-dev-02` | `gb300l` | `nkx-slinky-dev-02` | `batch` | `/raid/scratch/benchops-$(id -un)/models` |
+
+Both currently use Slurm account `nvidia`, 140 logical CPUs per GB300 worker,
+shared storage rooted at `/scratch/fsw`, and cluster-specific image/model/data
+caches. Treat the cluster profile as authoritative rather than copying paths
+between clusters:
+
+- `/Users/oleizerov/Documents/code/ai-cluster-benchmarking/clusters/nkx-slinky-gb300-dev-01.yaml`
+- `/Users/oleizerov/Documents/code/ai-cluster-benchmarking/clusters/nkx-slinky-lepton-gb300-dev-02.yaml`
+
+Cluster mutations are outside benchmark reproduction. Do not change EKS,
+Slurm, Kubernetes nodes, mounts, taints, annotations, fabric configuration, or
+installed operators unless the user explicitly requests that separate action.
+
+### Prior evidence: read before changing a recipe or runner
+
+The local BenchOps repository is:
+
+`/Users/oleizerov/Documents/code/ai-cluster-benchmarking`
+
+It contains completed run records for all three model families on both the NKX
+and Lepton clusters:
+
+| Model | Framework used by prior reviewed results | Matrix |
+| --- | --- | --- |
+| DeepSeek-V4-Pro FP4 | Dynamo-vLLM | `matrices/inferencex/deepseek-v4-pro-fp4-gb300.yaml` |
+| MiniMax-M3 MXFP8 | Dynamo-vLLM | `matrices/inferencex/minimax-m3-mxfp8-gb300.yaml` |
+| Qwen3.5-397B-A17B FP8 | Dynamo-SGLang | `matrices/inferencex/qwen3.5-397b-a17b-fp8-gb300.yaml` |
+
+Resolve those paths relative to the BenchOps repository. Their workload
+contracts are under `workloads/inference/`, and immutable per-job evidence is
+under `results/runs/`. Inspect result JSON with `jq`; do not dump the entire
+collection. Each completed record includes the requested configuration,
+effective command, source revision, placement, artifacts, status, and metrics.
+
+For DeepSeek, read this investigation before changing UCX, NIXL, CPU,
+container setup, KV roles, or profiling behavior:
+
+`/Users/oleizerov/Documents/code/ai-cluster-benchmarking/docs/deepseek-native-transport-and-profiling-plan.md`
+
+Important demonstrated lessons from that investigation:
+
+- the successful reference path is Dynamo-vLLM, not Dynamo-TensorRT-LLM;
+- ConnectX RoCE and same-block placement materially affect validity;
+- replacing the upstream `vllm-container-deps.sh` setup caused a large
+  performance regression; compose upstream setup with the NKX overlay;
+- the validated DeepSeek path used a checksum-pinned UCX 1.22 overlay and
+  explicit NVSHMEM HCA mapping;
+- model staging, image materialization, caches, aarch64 tools, scheduler
+  arguments, and source pins were part of BenchOps' cluster adapter;
+- these adaptations must be made explicit here, not rediscovered through
+  repeated full benchmark failures.
+
+The paused TensorRT investigation is preserved separately at:
+
+`/Users/oleizerov/Documents/code/InferenceX-gb300-nkx`
+
+Use it only as failure evidence. It selected a different engine and development
+image, encountered a Dynamo lease expiry during long TRT autotuning, and then
+introduced an unsafe per-rank Dynamo upgrade that raced while modifying
+`/opt/dynamo/venv`. It is not the baseline reproduction path.
+
+### Reproducibility and submission rules
+
+- Freeze the baseline contract: exact image digest, model revision, recipe,
+  InferenceX and `srt-slurm` revisions, setup scripts, package inventory,
+  topology, traffic shape, and fabric environment.
+- Do not claim equivalence from image tags or major/minor package versions.
+- Reproduce the immutable baseline before proposing an upgrade.
+- Treat any image, runtime, recipe, topology, setup, or fabric change as a new
+  candidate variant and record its reason and expected effect.
+- Never install or upgrade packages concurrently from worker or MPI ranks.
+  Prefer an immutable derived image. If temporary preparation is unavoidable,
+  prepare once in an isolated versioned directory, validate its manifest, and
+  expose it read-only to workers.
+- Do not submit a full benchmark after a failure until the first fatal
+  signature is understood and the proposed fix passes the smallest focused
+  probe using the exact image and relevant multi-rank process topology.
+- A readiness gate must validate image/model availability, package imports,
+  multi-rank startup, model initialization, worker registration, control-plane
+  lease survival, fabric selection, and one inference request before an
+  expensive sweep.
+- Never add exclusions or silently weaken validation merely to get a green
+  run. Record unhealthy nodes separately and obtain user direction.
+- Do not submit jobs, dispatch GitHub workflows, cancel jobs, or mutate cluster
+  state unless the active user request authorizes it.
+
+Before the first reproduction submission, compare the generated effective
+configuration against one completed BenchOps record for the same matrix point.
+Only scheduler identifiers and equivalent physical paths should differ without
+an explicitly documented candidate classification.
+
 > **Mandatory reading: [`CONTRIBUTING.md`](CONTRIBUTING.md)** — read it before opening or reviewing any PR. It covers the full PR review flow, the CODEOWNER sign-off process, the `/reuse-sweep-run` merge path, post-merge responsibilities, and critical cluster rules (e.g. never leaving root-owned files on AMD runners).
 
 > **PR and GitHub-issue titles & descriptions must be bilingual — include a Simplified Chinese version in addition to English.** Title format: `<English title> / <中文标题>`. In the PR/issue body, follow the English content with its Chinese translation (e.g. a `## 中文说明` section mirroring the summary; don't translate code blocks, logs, or stack traces — summarize around them). **PR comments must include a Chinese translation too** — conversation comments, review summaries, and inline review comments alike: short comments as a single `<English> / <中文>` line, longer ones with the Chinese translation as a trailing paragraph (`中文：...`). Exception: the CODEOWNER sign-off template stays English-verbatim (the sign-off verifier triggers on its exact phrase); bot-generated comments follow their own workflow templates. This applies to every PR and every issue, matching the bilingual docs rule in Code Conventions.
