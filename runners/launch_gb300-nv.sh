@@ -8,6 +8,11 @@ export SLURM_PARTITION="${SLURM_PARTITION:-batch_1}"
 export SLURM_ACCOUNT="${SLURM_ACCOUNT:-benchmark}"
 export ENROOT_ROOTFS_WRITABLE=1
 
+# NKX GB300 uses ConnectX RoCE. Some upstream recipes omit the UCX reliable
+# connection transport, which leaves NIXL without an active-message transport.
+# Keep this runner-specific and overridable rather than changing shared recipes.
+export SRT_UCX_TLS="${SRT_UCX_TLS:-rc,cuda_ipc,cuda_copy,sm,self,tcp}"
+
 # The official runner uses /data/home/sa-shared/gharunners. Other GB300
 # clusters can override the shared root without changing benchmark recipes.
 export INFERENCEX_CACHE_ROOT="${INFERENCEX_CACHE_ROOT:-/data/home/sa-shared/gharunners}"
@@ -477,6 +482,23 @@ fi
 # `srtctl apply -f` parses; strip it to the real path for the sed. srtctl
 # below still receives the full CONFIG_FILE (with selector).
 CONFIG_PATH="${CONFIG_FILE%%:*}"
+
+# Apply the cluster fabric override only to the affected DSv4 TensorRT-LLM
+# recipe checkout. Other recipes retain their source configuration.
+if [[ "$FRAMEWORK" == "dynamo-trt" && "$MODEL_PREFIX" == "dsv4" ]]; then
+    UCX_TLS_ENTRIES=$(grep -cE '^[[:space:]]+UCX_TLS:' "$CONFIG_PATH" || true)
+    if [[ "$UCX_TLS_ENTRIES" -eq 0 ]]; then
+        echo "Error: selected DSv4 recipe has no UCX_TLS entries: $CONFIG_PATH" >&2
+        exit 1
+    fi
+    sed -i -E "s#^([[:space:]]+UCX_TLS:).*#\1 ${SRT_UCX_TLS}#" "$CONFIG_PATH"
+    if [[ "$(grep -cE "^[[:space:]]+UCX_TLS: ${SRT_UCX_TLS}$" "$CONFIG_PATH")" -ne "$UCX_TLS_ENTRIES" ]]; then
+        echo "Error: failed to apply UCX_TLS=${SRT_UCX_TLS} to every entry in $CONFIG_PATH" >&2
+        exit 1
+    fi
+    echo "Applied UCX_TLS=${SRT_UCX_TLS} to ${UCX_TLS_ENTRIES} entries in $CONFIG_PATH"
+fi
+
 sed -i "s/^name:.*/name: \"${RUNNER_NAME}\"/" "$CONFIG_PATH"
 
 # --no-preflight skips srtctl's pre-submit model-path stat, which runs on
