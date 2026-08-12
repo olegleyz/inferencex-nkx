@@ -47,6 +47,13 @@ manifest digest, and then passes only its `localPath` as
 `MODEL_PATH_OVERRIDE`. The benchmark job never downloads, copies, repairs, or
 rewrites model data.
 
+NKX Slurm currently accepts an unpinned 16-node allocation but rejects some
+smaller explicitly pinned allocations under `topology/block`. Both BenchOps
+staging and the benchmark's immediate read-only preflight therefore request
+all 16 nodes without `--nodelist`; one task runs per worker and validates its
+actual `SLURMD_NODENAME` against the immutable receipt. Staging still limits
+copy and full-checksum work to four workers at a time.
+
 Job `2024`'s archived configuration and generated Slurm script show the
 upstream `vllm-container-deps.sh` setup and do not expose an additional UCX
 binary overlay path. This reproduction therefore does not add an unrecorded

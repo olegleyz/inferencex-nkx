@@ -121,7 +121,6 @@ if [[ -n "${MODEL_PATH_OVERRIDE:-}" ]]; then
         jq -er '.nodes.results[].node' "$MODEL_STAGE_RECEIPT"
     )
     test "${#MODEL_STAGE_NODES[@]}" -gt 0
-    MODEL_STAGE_NODELIST="$(IFS=,; echo "${MODEL_STAGE_NODES[*]}")"
     srun \
         --partition="$SLURM_PARTITION" \
         --account="$SLURM_ACCOUNT" \
@@ -129,7 +128,6 @@ if [[ -n "${MODEL_PATH_OVERRIDE:-}" ]]; then
         --ntasks="${#MODEL_STAGE_NODES[@]}" \
         --ntasks-per-node=1 \
         --gpus-per-node=1 \
-        --nodelist="$MODEL_STAGE_NODELIST" \
         --exclusive \
         --time=30 \
         python3 "${GITHUB_WORKSPACE}/runners/verify_model_stage.py" \
