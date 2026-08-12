@@ -5826,3 +5826,11 @@
     - "Add an NKX-only diagnostic configuration that preserves the existing DeepSeek-V4-Pro TensorRT-LLM prefill and decode worker settings while reducing the deployment to the smallest valid disaggregated topology: one TP4 prefill node and one TP8 decode worker across two nodes."
     - "Limit serving readiness to 45 minutes and submit one warmup plus one measured request only after both workers register; normal dsv4-fp4-gb300-dynamo-trt benchmark configurations are unchanged."
   pr-link: XXX
+
+- config-keys:
+    - dsv4-fp4-gb300-dynamo-trt
+    - dsv4-fp4-gb300-dynamo-trt-readiness
+  description:
+    - "On the NKX GB300 runner, install ai-dynamo-runtime 1.3.0.post1 over the DeepSeek V4 development image and set ETCD_LEASE_TTL=1800 for prefill and decode workers."
+    - "This prevents the prefill worker's 10-second lease from expiring while the synchronous TensorRT-LLM autotuner blocks runtime progress; other runners and model paths are unchanged."
+  pr-link: XXX

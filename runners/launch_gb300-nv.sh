@@ -545,14 +545,30 @@ if [[ "$FRAMEWORK" == "dynamo-trt" && "$MODEL_PREFIX" == "dsv4" ]]; then
             echo "Error: selected DSv4 recipe has no ${section}: $CONFIG_PATH" >&2
             exit 1
         fi
-        sed -i "${section_line}a\\    NCCL_CUMEM_ENABLE: \"${SRT_NCCL_CUMEM_ENABLE}\"\n    NCCL_MNNVL_ENABLE: \"${SRT_NCCL_MNNVL_ENABLE}\"\n    NCCL_NET_PLUGIN: \"none\"\n    NVSHMEM_ENABLE_NIC_PE_MAPPING: \"1\"\n    NVSHMEM_HCA_LIST: \"${SRT_NVSHMEM_HCA_LIST}\"" "$CONFIG_PATH"
+        sed -i "${section_line}a\\    ETCD_LEASE_TTL: \"1800\"\n    NCCL_CUMEM_ENABLE: \"${SRT_NCCL_CUMEM_ENABLE}\"\n    NCCL_MNNVL_ENABLE: \"${SRT_NCCL_MNNVL_ENABLE}\"\n    NCCL_NET_PLUGIN: \"none\"\n    NVSHMEM_ENABLE_NIC_PE_MAPPING: \"1\"\n    NVSHMEM_HCA_LIST: \"${SRT_NVSHMEM_HCA_LIST}\"" "$CONFIG_PATH"
     done
+    test "$(grep -cE '^[[:space:]]+ETCD_LEASE_TTL: "1800"$' "$CONFIG_PATH")" -eq 2
     test "$(grep -cE "^[[:space:]]+NCCL_CUMEM_ENABLE: \"${SRT_NCCL_CUMEM_ENABLE}\"$" "$CONFIG_PATH")" -eq 2
     test "$(grep -cE "^[[:space:]]+NCCL_MNNVL_ENABLE: \"${SRT_NCCL_MNNVL_ENABLE}\"$" "$CONFIG_PATH")" -eq 2
     test "$(grep -cE '^[[:space:]]+NCCL_NET_PLUGIN: \"none\"$' "$CONFIG_PATH")" -eq 2
     test "$(grep -cE '^[[:space:]]+NVSHMEM_ENABLE_NIC_PE_MAPPING: \"1\"$' "$CONFIG_PATH")" -eq 2
     test "$(grep -cF "NVSHMEM_HCA_LIST: \"${SRT_NVSHMEM_HCA_LIST}\"" "$CONFIG_PATH")" -eq 2
     echo "Applied explicit NVSHMEM RoCE mapping to prefill and decode environments"
+
+    # The DeepSeek V4 development image contains ai-dynamo-runtime 1.2.0,
+    # whose fixed 10-second etcd lease expires while the synchronous TRT-LLM
+    # autotuner blocks the worker runtime. Install the first stable 1.3 runtime
+    # that supports ETCD_LEASE_TTL; an import-only probe verifies that it is
+    # compatible with this image's dynamo.trtllm backend.
+    if [[ "$(grep -cE '^  install: false$' "$CONFIG_PATH")" -ne 1 ]] ||
+       grep -qE '^  version:' "$CONFIG_PATH"; then
+        echo "Error: unexpected Dynamo install configuration in $CONFIG_PATH" >&2
+        exit 1
+    fi
+    sed -i -E 's/^  install: false$/  install: true\n  version: "1.3.0.post1"/' "$CONFIG_PATH"
+    grep -qE '^  install: true$' "$CONFIG_PATH"
+    grep -qE '^  version: "1.3.0.post1"$' "$CONFIG_PATH"
+    echo "Applied ai-dynamo-runtime 1.3.0.post1 with ETCD_LEASE_TTL=1800"
 
     # A focused serving-readiness diagnostic for the NKX runner. Keep the
     # production recipe intact unless explicitly requested by a diagnostic
