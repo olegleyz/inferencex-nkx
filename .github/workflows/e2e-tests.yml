@@ -75,6 +75,26 @@ on:
                 required: false
                 type: string
                 default: "[]"
+            model-stage-file:
+                description: "Committed BenchOps ModelStage YAML (optional)"
+                required: false
+                type: string
+                default: ""
+            benchops-repository:
+                description: "GitHub owner/repository containing BenchOps"
+                required: false
+                type: string
+                default: ""
+            benchops-ref:
+                description: "Immutable BenchOps commit"
+                required: false
+                type: string
+                default: ""
+            benchops-config-root:
+                description: "Runner-local BenchOps catalog/connection root"
+                required: false
+                type: string
+                default: ""
     workflow_call:
         inputs:
             generate-cli-command:
@@ -90,6 +110,26 @@ on:
                 description: "Ref (branch/sha) to checkout for generating configs"
                 required: false
                 type: string
+            model-stage-file:
+                description: "Committed BenchOps ModelStage YAML (optional)"
+                required: false
+                type: string
+                default: ""
+            benchops-repository:
+                description: "GitHub owner/repository containing BenchOps"
+                required: false
+                type: string
+                default: ""
+            benchops-ref:
+                description: "Immutable BenchOps commit"
+                required: false
+                type: string
+                default: ""
+            benchops-config-root:
+                description: "Runner-local BenchOps catalog/connection root"
+                required: false
+                type: string
+                default: ""
             duration-override:
                 description: "Override matrix.config.duration (seconds). Empty = use matrix value."
                 required: false
@@ -301,6 +341,10 @@ jobs:
             decode-additional-settings: ${{ toJson(matrix.config.decode.additional-settings) }}
             run-eval: false
             ref: ${{ inputs.ref }}
+            model-stage-file: ${{ inputs.model-stage-file }}
+            benchops-repository: ${{ inputs.benchops-repository }}
+            benchops-ref: ${{ inputs.benchops-ref }}
+            benchops-config-root: ${{ inputs.benchops-config-root }}
 
     test-sweep-multi-node-evals:
         needs: get-jobs
@@ -354,6 +398,10 @@ jobs:
             eval-only: true
             eval-conc: ${{ matrix.config['eval-all-concs'] && join(matrix.config.conc, ' ') || matrix.config['eval-conc'] }}
             ref: ${{ inputs.ref }}
+            model-stage-file: ${{ inputs.model-stage-file }}
+            benchops-repository: ${{ inputs.benchops-repository }}
+            benchops-ref: ${{ inputs.benchops-ref }}
+            benchops-config-root: ${{ inputs.benchops-config-root }}
 
     test-sweep-agentic:
         needs: get-jobs
@@ -495,6 +543,10 @@ jobs:
             run-eval: false
             scenario-type: agentic-coding
             ref: ${{ inputs.ref }}
+            model-stage-file: ${{ inputs.model-stage-file }}
+            benchops-repository: ${{ inputs.benchops-repository }}
+            benchops-ref: ${{ inputs.benchops-ref }}
+            benchops-config-root: ${{ inputs.benchops-config-root }}
 
     test-sweep-single-node:
         needs: get-jobs

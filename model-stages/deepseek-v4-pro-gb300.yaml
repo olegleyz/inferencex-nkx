@@ -1,0 +1,28 @@
+apiVersion: benchops.nvidia.com/v1alpha1
+kind: ModelStage
+
+metadata:
+  name: deepseek-v4-pro-gb300
+
+cluster:
+  id: nkx-slinky-gb300-dev-01
+
+model:
+  source:
+    type: huggingface
+    repository: deepseek-ai/DeepSeek-V4-Pro
+    revision: b5968e9190ef611bbf34a7229255be88a0e937c1
+  shared:
+    root: /scratch/fsw/users/oleizerov/models
+  local:
+    root: /scratch/models
+
+targets:
+  gpuNodes: ALL
+
+transfer:
+  concurrency: 4
+
+verification:
+  requireAllTargets: true
+  minimumFreeSpace: 1Ti
