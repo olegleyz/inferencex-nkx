@@ -5819,3 +5819,10 @@
   description:
     - "Map both Enroot's nvcr.io#... spelling and the recipe's nvcr.io/... spelling to the same prepared squash image."
   pr-link: XXX
+
+- config-keys:
+    - dsv4-fp4-gb300-dynamo-trt-readiness
+  description:
+    - "Add an NKX-only diagnostic configuration that preserves the existing DeepSeek-V4-Pro TensorRT-LLM prefill and decode worker settings while reducing the deployment to the smallest valid disaggregated topology: one TP4 prefill node and one TP8 decode worker across two nodes."
+    - "Limit serving readiness to 45 minutes and submit one warmup plus one measured request only after both workers register; normal dsv4-fp4-gb300-dynamo-trt benchmark configurations are unchanged."
+  pr-link: XXX

@@ -553,6 +553,45 @@ if [[ "$FRAMEWORK" == "dynamo-trt" && "$MODEL_PREFIX" == "dsv4" ]]; then
     test "$(grep -cE '^[[:space:]]+NVSHMEM_ENABLE_NIC_PE_MAPPING: \"1\"$' "$CONFIG_PATH")" -eq 2
     test "$(grep -cF "NVSHMEM_HCA_LIST: \"${SRT_NVSHMEM_HCA_LIST}\"" "$CONFIG_PATH")" -eq 2
     echo "Applied explicit NVSHMEM RoCE mapping to prefill and decode environments"
+
+    # A focused serving-readiness diagnostic for the NKX runner. Keep the
+    # production recipe intact unless explicitly requested by a diagnostic
+    # config: use the smallest valid disaggregated topology (1P + 1D), shorten
+    # the readiness window, and send only one warmup and one measured request
+    # if the workers become ready.
+    if [[ "${NKX_DSV4_TRT_READINESS_PROBE:-0}" == "1" ]]; then
+        readonly expected_probe_values=(
+            '  decode_workers: 4'
+            '  decode_nodes: 8'
+            '  concurrencies: "4"'
+            '  num_prompts_mult: 10'
+            '  num_warmup_mult: 20'
+            '  max_attempts: 720'
+        )
+        for expected in "${expected_probe_values[@]}"; do
+            if [[ "$(grep -cF "$expected" "$CONFIG_PATH")" -ne 1 ]]; then
+                echo "Error: readiness probe expected exactly one '$expected' in $CONFIG_PATH" >&2
+                exit 1
+            fi
+        done
+
+        sed -i \
+            -e 's/^  decode_workers: 4$/  decode_workers: 1/' \
+            -e 's/^  decode_nodes: 8$/  decode_nodes: 2/' \
+            -e 's/^  concurrencies: "4"$/  concurrencies: "1"/' \
+            -e 's/^  num_prompts_mult: 10$/  num_prompts_mult: 1/' \
+            -e 's/^  num_warmup_mult: 20$/  num_warmup_mult: 1/' \
+            -e 's/^  max_attempts: 720$/  max_attempts: 270/' \
+            "$CONFIG_PATH"
+
+        grep -q '^  decode_workers: 1$' "$CONFIG_PATH"
+        grep -q '^  decode_nodes: 2$' "$CONFIG_PATH"
+        grep -q '^  concurrencies: "1"$' "$CONFIG_PATH"
+        grep -q '^  num_prompts_mult: 1$' "$CONFIG_PATH"
+        grep -q '^  num_warmup_mult: 1$' "$CONFIG_PATH"
+        grep -q '^  max_attempts: 270$' "$CONFIG_PATH"
+        echo "Applied NKX DSv4 TensorRT readiness probe: 1P/1D on 3 nodes, 45-minute readiness limit"
+    fi
 fi
 
 sed -i "s/^name:.*/name: \"${RUNNER_NAME}\"/" "$CONFIG_PATH"
