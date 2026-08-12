@@ -114,7 +114,8 @@ First dispatch the workflow from the pushed reproduction commit with
 `model-stage-result-file` pointing to the committed full-verification receipt.
 This preserves the exact image, setup, 6P/1D topology, and transport path but
 changes the traffic-only fields to concurrency 1, no warmup, and one formal
-request. It is a readiness candidate, not a comparable benchmark result.
+request. Its job display and result filename are explicitly suffixed
+`readiness`; it is a readiness candidate, not a comparable benchmark result.
 
 Only after that gate proves image and model access, multi-rank startup, model
 initialization, worker registration, control-plane lease survival, selected
