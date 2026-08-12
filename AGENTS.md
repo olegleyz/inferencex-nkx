@@ -135,6 +135,151 @@ configuration against one completed BenchOps record for the same matrix point.
 Only scheduler identifiers and equivalent physical paths should differ without
 an explicitly documented candidate classification.
 
+### Handoff from the `cluster-build` Codex sessions (August 12, 2026)
+
+This section is the starting state for a new Codex chat opened in this
+worktree. Verify live authentication, Git status, GitHub Actions, and Slurm
+state rather than assuming they are unchanged.
+
+#### Repository and branch state
+
+- Public fork: `https://github.com/olegleyz/inferencex-nkx`
+- Upstream: `https://github.com/semiAnalysisAI/InferenceX/`
+- Canonical local checkout:
+  `/Users/oleizerov/Documents/code/InferenceX-gb300-nkx`
+- Active reproduction branch: `codex/nkx-vllm-repro`
+- Baseline InferenceX revision:
+  `d089a9138c53d16c6388e4251a078fee8ca7bea6`
+- Context commit: `d2825a190`
+- Paused TRT branch: `oleizerov/gb300-nkx-runner`, preserved at
+  `b629155673115f04a026167064ddc3dc434ceb12`
+
+At handoff, the reproduction branch also has uncommitted work in:
+
+- `.github/workflows/benchmark-multinode-tmpl.yml`
+- `.github/workflows/e2e-tests.yml`
+- `runners/launch_gb300-nv.sh`
+- `model-stages/deepseek-v4-pro-gb300.yaml`
+
+Those files are an in-progress proposal to run a committed, revision-qualified
+BenchOps `ModelStage` before the original InferenceX launcher, then pass only
+the verified node-local `MODEL_PATH_OVERRIDE` into InferenceX. They have not
+been accepted as the final minimal adapter or validated end to end. Inspect the
+diff before editing. Do not discard, commit wholesale, or assume correctness.
+In particular, validate workflow input forwarding for accidental duplicate
+keys and decide whether invoking BenchOps for model staging is sufficiently
+minimal and transparent for this reproduction goal.
+
+#### What was attempted through the fork
+
+The first GitHub Actions effort did not reproduce the prior BenchOps baseline.
+It selected DeepSeek-V4-Pro with Dynamo-TensorRT-LLM and development image
+`nvcr.io/nvidia/ai-dynamo/tensorrtllm-runtime:1.3.0-deepseek-v4-dev.1`.
+The prior successful BenchOps baseline used Dynamo-vLLM and image
+`vllm/vllm-openai:dsv4-megamoe-mxfp4-arm64-cu130-4ba0a72`.
+
+The TRT branch progressively added cluster-specific support for the NKX
+runner: Slurm identifiers, node-local model path, SquashFS reuse, aarch64 `uv`
+and environment preparation, explicit ConnectX RoCE/NVSHMEM mapping, UCX `rc`
+transport, MNNVL/CuMem settings, PDL disablement, and focused readiness
+workflows. These changes are diagnostic evidence for a different backend, not
+the adapter to copy into the vLLM reproduction branch.
+
+Relevant GitHub Actions history:
+
+| Run | Commit | Outcome | Evidence |
+| --- | --- | --- | --- |
+| `31557290928` | `e7bd0ff0b` | cancelled | Full TRT run reached warm-up, then showed `ibv_create_cq: Invalid argument` and `ibv_create_qp: Cannot allocate memory` with the wrong effective MNNVL behavior. |
+| `31558738676` | `88de9b83c` | success | Source-controlled TRT preflight: 16-node model/image/local-scratch/GPU/RoCE checks, native RoCE collective, and a 2-node/8-rank MNNVL canary passed. This validates portions of the cluster contract, not the vLLM benchmark. |
+| `31559137318` | `88de9b83c` | failure | Corrected full TRT run did not reach serving readiness. |
+| `31567353065` / Slurm `2272` | `0bde71b1a` | failure | Focused 1-prefill/1-decode probe showed healthy etcd and decode warm-up, but prefill registration failed after roughly 16 minutes of synchronous TRT autotuning. The image actually contained `ai-dynamo-runtime 1.2.0`; its fixed short lease expired while the worker blocked. |
+| `31619962271` / Slurm `2283` | `b62915567` | failure | A workaround enabled Dynamo `1.3.0.post1` and `ETCD_LEASE_TTL=1800`, but every MPI rank tried to upgrade the same `/opt/dynamo/venv`. Concurrent `pip` operations raced and corrupted package installation before model loading. |
+
+Run URLs are
+`https://github.com/olegleyz/inferencex-nkx/actions/runs/<RUN_ID>`.
+
+The conclusions are:
+
+1. The cluster passed meaningful GPU, storage, RoCE, MNNVL, and collective
+   probes; the 24-hour failure sequence does not demonstrate a generally
+   broken NKX cluster.
+2. The experiment changed engine, image, initialization path, runtime, and
+   process topology, so it was not the same benchmark as the successful
+   BenchOps DeepSeek run.
+3. The final per-rank package upgrade was an unsafe workaround introduced by
+   us. Never repeat it. A future TRT candidate needs a compatible immutable
+   image or a single serialized preparation step outside worker ranks.
+4. `NCCL_NET_PLUGIN=none`, the TRT PDL override, the lease override, and the
+   focused TRT topology are diagnostic changes. Do not transfer them into the
+   vLLM baseline without independent evidence.
+
+#### What BenchOps already proved
+
+BenchOps completed all three reviewed model families on both clusters. The
+run-record inventory at handoff contained:
+
+| Workload | NKX completed records | Lepton completed records |
+| --- | ---: | ---: |
+| DeepSeek-V4-Pro FP4 | 44 | 1 |
+| MiniMax-M3 MXFP8 | 44 | 40 |
+| Qwen3.5-397B-A17B FP8 | 45 | 31 |
+
+These are evidence records, not a claim that every run is an equivalent
+baseline. Compare only identical model revision, image, recipe, traffic,
+parallelism, topology, runtime setup, and source revisions.
+
+For the initial reproduction, use NKX DeepSeek Slurm job `2024` as the clearest
+known-good reference record:
+
+`/Users/oleizerov/Documents/code/ai-cluster-benchmarking/results/runs/nkx-slinky-gb300-dev-01--inference-deepseek-v4-pro-fp4--c4d58b208b2b--2024.json`
+
+It completed all 40,960 requests with Dynamo-vLLM, configuration
+`6p1d-dep4-dep8`, 8192/1024 traffic, and output-token throughput
+`44,736.48 tokens/s`. The published reference recorded in the investigation is
+`44,990.63 tokens/s`. Read the result JSON and investigation document for the
+complete contract; do not reduce the comparison to throughput alone.
+
+The performance investigation established that an earlier BenchOps adapter
+replaced upstream `vllm-container-deps.sh` instead of composing it. That
+mistake produced roughly 20-22k output tokens/s. Restoring upstream setup and
+then applying the pinned NKX UCX overlay recovered job `2024` to within 0.56%
+of the published result. This is the strongest warning against casually
+rewriting the upstream launcher.
+
+#### Next execution plan
+
+Do not immediately dispatch another full benchmark. Work in this order:
+
+1. Select exactly the DeepSeek `6p1d-dep4-dep8` matrix point used by job
+   `2024`, including source, model, image, recipe, traffic, concurrency and
+   same-block placement.
+2. Extract and compare job `2024`'s effective command, setup scripts,
+   environment, paths and artifact identities against the unmodified
+   InferenceX workflow at this branch's baseline revision.
+3. Classify every difference as either an equivalent cluster input
+   (Slurm account/partition, cache/model path) or a candidate runtime change.
+   Minimize the former; do not silently introduce the latter.
+4. Resolve model availability transparently. If the declarative `ModelStage`
+   proposal is retained, pin its implementation commit, archive its manifests
+   and output, and ensure it only prepares/verifies the model before the
+   original InferenceX execution path.
+5. Run a focused readiness gate with the exact vLLM image and relevant
+   multi-rank topology. It must prove model/image access, upstream-plus-NKX
+   setup composition, worker registration, selected local CUDA-IPC and remote
+   RoCE transports, one request, and artifact collection.
+6. Only after the readiness gate passes, dispatch one full point through the
+   original GitHub Actions mechanism. Preserve the run commit and all native
+   InferenceX artifacts.
+7. Compare the resulting contract and metrics with job `2024`. Explain every
+   remaining difference before expanding to repeats, other Pareto points,
+   Lepton, MiniMax, or Qwen.
+
+Definition of done for the first reproduction: a peer can start from the
+pushed commit, inspect one committed configuration, dispatch the documented
+workflow without hidden node changes, retrieve the native artifacts, and
+obtain a valid result comparable to job `2024` with all deviations explicitly
+recorded.
+
 > **Mandatory reading: [`CONTRIBUTING.md`](CONTRIBUTING.md)** — read it before opening or reviewing any PR. It covers the full PR review flow, the CODEOWNER sign-off process, the `/reuse-sweep-run` merge path, post-merge responsibilities, and critical cluster rules (e.g. never leaving root-owned files on AMD runners).
 
 > **PR and GitHub-issue titles & descriptions must be bilingual — include a Simplified Chinese version in addition to English.** Title format: `<English title> / <中文标题>`. In the PR/issue body, follow the English content with its Chinese translation (e.g. a `## 中文说明` section mirroring the summary; don't translate code blocks, logs, or stack traces — summarize around them). **PR comments must include a Chinese translation too** — conversation comments, review summaries, and inline review comments alike: short comments as a single `<English> / <中文>` line, longer ones with the Chinese translation as a trailing paragraph (`中文：...`). Exception: the CODEOWNER sign-off template stays English-verbatim (the sign-off verifier triggers on its exact phrase); bot-generated comments follow their own workflow templates. This applies to every PR and every issue, matching the bilingual docs rule in Code Conventions.
