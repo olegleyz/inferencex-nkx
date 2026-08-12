@@ -507,8 +507,8 @@ if [[ "$FRAMEWORK" == "dynamo-trt" && "$MODEL_PREFIX" == "dsv4" ]]; then
         echo "Error: selected DSv4 recipe has no TRTLLM_ENABLE_PDL entries: $CONFIG_PATH" >&2
         exit 1
     fi
-    sed -i -E "s#^([[:space:]]+TRTLLM_ENABLE_PDL:).*#\1 ${SRT_TRTLLM_ENABLE_PDL}#" "$CONFIG_PATH"
-    if [[ "$(grep -cE "^[[:space:]]+TRTLLM_ENABLE_PDL: ${SRT_TRTLLM_ENABLE_PDL}$" "$CONFIG_PATH")" -ne "$PDL_ENTRIES" ]]; then
+    sed -i -E "s#^([[:space:]]+TRTLLM_ENABLE_PDL:).*#\1 \"${SRT_TRTLLM_ENABLE_PDL}\"#" "$CONFIG_PATH"
+    if [[ "$(grep -cE "^[[:space:]]+TRTLLM_ENABLE_PDL: \"${SRT_TRTLLM_ENABLE_PDL}\"$" "$CONFIG_PATH")" -ne "$PDL_ENTRIES" ]]; then
         echo "Error: failed to apply TRTLLM_ENABLE_PDL=${SRT_TRTLLM_ENABLE_PDL} to every entry in $CONFIG_PATH" >&2
         exit 1
     fi
