@@ -12,6 +12,10 @@ export ENROOT_ROOTFS_WRITABLE=1
 # connection transport, which leaves NIXL without an active-message transport.
 # Keep this runner-specific and overridable rather than changing shared recipes.
 export SRT_UCX_TLS="${SRT_UCX_TLS:-rc,cuda_ipc,cuda_copy,sm,self,tcp}"
+# The NKX stack has reproduced a DeepGEMM rank-completion timeout followed by
+# Xid 43 during DSv4 warmup with PDL enabled. Keep the diagnostic cluster-local
+# and overridable while preserving the rest of the reviewed recipe.
+export SRT_TRTLLM_ENABLE_PDL="${SRT_TRTLLM_ENABLE_PDL:-0}"
 
 # The official runner uses /data/home/sa-shared/gharunners. Other GB300
 # clusters can override the shared root without changing benchmark recipes.
@@ -497,6 +501,18 @@ if [[ "$FRAMEWORK" == "dynamo-trt" && "$MODEL_PREFIX" == "dsv4" ]]; then
         exit 1
     fi
     echo "Applied UCX_TLS=${SRT_UCX_TLS} to ${UCX_TLS_ENTRIES} entries in $CONFIG_PATH"
+
+    PDL_ENTRIES=$(grep -cE '^[[:space:]]+TRTLLM_ENABLE_PDL:' "$CONFIG_PATH" || true)
+    if [[ "$PDL_ENTRIES" -eq 0 ]]; then
+        echo "Error: selected DSv4 recipe has no TRTLLM_ENABLE_PDL entries: $CONFIG_PATH" >&2
+        exit 1
+    fi
+    sed -i -E "s#^([[:space:]]+TRTLLM_ENABLE_PDL:).*#\1 ${SRT_TRTLLM_ENABLE_PDL}#" "$CONFIG_PATH"
+    if [[ "$(grep -cE "^[[:space:]]+TRTLLM_ENABLE_PDL: ${SRT_TRTLLM_ENABLE_PDL}$" "$CONFIG_PATH")" -ne "$PDL_ENTRIES" ]]; then
+        echo "Error: failed to apply TRTLLM_ENABLE_PDL=${SRT_TRTLLM_ENABLE_PDL} to every entry in $CONFIG_PATH" >&2
+        exit 1
+    fi
+    echo "Applied TRTLLM_ENABLE_PDL=${SRT_TRTLLM_ENABLE_PDL} to ${PDL_ENTRIES} entries in $CONFIG_PATH"
 fi
 
 sed -i "s/^name:.*/name: \"${RUNNER_NAME}\"/" "$CONFIG_PATH"
