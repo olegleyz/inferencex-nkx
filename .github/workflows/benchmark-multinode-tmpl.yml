@@ -188,26 +188,6 @@ on:
         description: "Git ref (branch/sha) to checkout"
         required: false
         type: string
-      model-stage-file:
-        description: "Committed BenchOps ModelStage YAML; empty preserves the upstream workflow"
-        required: false
-        type: string
-        default: ""
-      benchops-repository:
-        description: "GitHub owner/repository containing the benchops implementation"
-        required: false
-        type: string
-        default: ""
-      benchops-ref:
-        description: "Immutable BenchOps commit containing the staging implementation"
-        required: false
-        type: string
-        default: ""
-      benchops-config-root:
-        description: "Runner-local BenchOps catalog and connection root"
-        required: false
-        type: string
-        default: ""
       model-stage-result-file:
         description: "Committed ready BenchOps ModelStage receipt; skips staging"
         required: false
@@ -338,32 +318,10 @@ jobs:
           clean: true
           submodules: true
 
-      - name: Validate declarative model staging inputs
-        if: ${{ inputs.model-stage-file != '' }}
-        run: |
-          set -euo pipefail
-          test -z "${{ inputs.model-stage-result-file }}"
-          test -n "${{ inputs.benchops-repository }}"
-          [[ "${{ inputs.benchops-ref }}" =~ ^[0-9a-f]{40}$ ]]
-          test -n "${{ inputs.benchops-config-root }}"
-          test -f "${{ inputs.model-stage-file }}"
-
-      - name: Check out pinned BenchOps
-        if: ${{ inputs.model-stage-file != '' }}
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-        with:
-          repository: ${{ inputs.benchops-repository }}
-          ref: ${{ inputs.benchops-ref }}
-          token: ${{ secrets.REPO_PAT }}
-          path: .benchops-source
-          clean: false
-          persist-credentials: false
-
       - name: Validate existing model staging receipt
         if: ${{ inputs.model-stage-result-file != '' }}
         run: |
           set -euo pipefail
-          test -z "${{ inputs.model-stage-file }}"
           test -f "${{ inputs.model-stage-result-file }}"
           cp "${{ inputs.model-stage-result-file }}" model-stage-result.json
           jq -e '
@@ -390,42 +348,15 @@ jobs:
           printf 'MODEL_PATH_OVERRIDE=%s\n' "$model_path_override" >> "$GITHUB_ENV"
           printf 'MODEL_STAGE_MANIFEST_DIGEST=%s\n' "$manifest_digest" >> "$GITHUB_ENV"
 
-      - name: Stage and verify pinned model
-        if: ${{ inputs.model-stage-file != '' }}
-        run: |
-          set -euo pipefail
-          set +e
-          uv --directory .benchops-source run benchops \
-            --root "${{ inputs.benchops-config-root }}" \
-            model stage \
-            -f "$GITHUB_WORKSPACE/${{ inputs.model-stage-file }}" \
-            --output-json "$GITHUB_WORKSPACE/model-stage-result.json"
-          stage_status=$?
-          set -e
-          if test -f model-stage-result.json; then
-            record_path="$(jq -er '.recordPath' model-stage-result.json)"
-            cp -R "$record_path" model-stage-record
-          fi
-          if test "$stage_status" -ne 0; then
-            exit "$stage_status"
-          fi
-          test "$(jq -r '.state' model-stage-result.json)" = ready
-          model_path_override="$(jq -er '.localPath' model-stage-result.json)"
-          cp "model-stage-record/shared-manifest.json" \
-            model-stage-shared-manifest.json
-          printf 'MODEL_PATH_OVERRIDE=%s\n' "$model_path_override" >> "$GITHUB_ENV"
-
       - name: Upload model staging provenance
-        if: ${{ always() && (inputs.model-stage-file != '' || inputs.model-stage-result-file != '') }}
+        if: ${{ always() && inputs.model-stage-result-file != '' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: model_stage_${{ inputs.exp-name }}_${{ github.run_attempt }}
           path: |
-            ${{ inputs.model-stage-file }}
             ${{ inputs.model-stage-result-file }}
             model-stage-result.json
             model-stage-shared-manifest.json
-            model-stage-record/**
           if-no-files-found: warn
 
       - name: Launch multi-node job script
@@ -523,7 +454,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Upload resolved srt-slurm configuration
-        if: ${{ always() && (inputs.model-stage-file != '' || inputs.model-stage-result-file != '') }}
+        if: ${{ always() && inputs.model-stage-result-file != '' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: model_stage_runtime_${{ inputs.exp-name }}_${{ github.run_attempt }}

@@ -75,26 +75,6 @@ on:
                 required: false
                 type: string
                 default: "[]"
-            model-stage-file:
-                description: "Committed BenchOps ModelStage YAML (optional)"
-                required: false
-                type: string
-                default: ""
-            benchops-repository:
-                description: "GitHub owner/repository containing BenchOps"
-                required: false
-                type: string
-                default: ""
-            benchops-ref:
-                description: "Immutable BenchOps commit"
-                required: false
-                type: string
-                default: ""
-            benchops-config-root:
-                description: "Runner-local BenchOps catalog/connection root"
-                required: false
-                type: string
-                default: ""
             model-stage-result-file:
                 description: "Committed ready BenchOps ModelStage receipt (optional)"
                 required: false
@@ -125,26 +105,6 @@ on:
                 description: "Ref (branch/sha) to checkout for generating configs"
                 required: false
                 type: string
-            model-stage-file:
-                description: "Committed BenchOps ModelStage YAML (optional)"
-                required: false
-                type: string
-                default: ""
-            benchops-repository:
-                description: "GitHub owner/repository containing BenchOps"
-                required: false
-                type: string
-                default: ""
-            benchops-ref:
-                description: "Immutable BenchOps commit"
-                required: false
-                type: string
-                default: ""
-            benchops-config-root:
-                description: "Runner-local BenchOps catalog/connection root"
-                required: false
-                type: string
-                default: ""
             model-stage-result-file:
                 description: "Committed ready BenchOps ModelStage receipt (optional)"
                 required: false
@@ -371,10 +331,6 @@ jobs:
             decode-additional-settings: ${{ toJson(matrix.config.decode.additional-settings) }}
             run-eval: false
             ref: ${{ inputs.ref }}
-            model-stage-file: ${{ inputs.model-stage-file }}
-            benchops-repository: ${{ inputs.benchops-repository }}
-            benchops-ref: ${{ inputs.benchops-ref }}
-            benchops-config-root: ${{ inputs.benchops-config-root }}
             model-stage-result-file: ${{ inputs.model-stage-result-file }}
             cluster-profile: ${{ inputs.cluster-profile }}
             readiness-only: ${{ inputs.readiness-only }}
@@ -431,10 +387,6 @@ jobs:
             eval-only: true
             eval-conc: ${{ matrix.config['eval-all-concs'] && join(matrix.config.conc, ' ') || matrix.config['eval-conc'] }}
             ref: ${{ inputs.ref }}
-            model-stage-file: ${{ inputs.model-stage-file }}
-            benchops-repository: ${{ inputs.benchops-repository }}
-            benchops-ref: ${{ inputs.benchops-ref }}
-            benchops-config-root: ${{ inputs.benchops-config-root }}
             model-stage-result-file: ${{ inputs.model-stage-result-file }}
             cluster-profile: ${{ inputs.cluster-profile }}
             readiness-only: ${{ inputs.readiness-only }}
@@ -579,10 +531,6 @@ jobs:
             run-eval: false
             scenario-type: agentic-coding
             ref: ${{ inputs.ref }}
-            model-stage-file: ${{ inputs.model-stage-file }}
-            benchops-repository: ${{ inputs.benchops-repository }}
-            benchops-ref: ${{ inputs.benchops-ref }}
-            benchops-config-root: ${{ inputs.benchops-config-root }}
             model-stage-result-file: ${{ inputs.model-stage-result-file }}
             cluster-profile: ${{ inputs.cluster-profile }}
             readiness-only: ${{ inputs.readiness-only }}
