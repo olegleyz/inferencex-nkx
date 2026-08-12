@@ -95,6 +95,10 @@ else
     exit 1
 fi
 
+# BenchOps may provide a revision-qualified, independently verified node-local
+# path. Preserve every existing model default when no override is supplied.
+export MODEL_PATH="${MODEL_PATH_OVERRIDE:-$MODEL_PATH}"
+
 NGINX_IMAGE="nginx:1.27.4"
 
 # Squash files live on the Vast NFS storage; use the /data/ mount
