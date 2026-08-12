@@ -16,6 +16,7 @@ from test_gb200_power_official_contract import (
 
 RECIPE_PATH = REPO_ROOT / "benchmarks/multi_node/srt-slurm-recipes/sglang/qwen3.5/gb300-fp8/8k1k/1p1d-tp4-tp4.yaml"
 LAUNCHER_PATH = REPO_ROOT / "runners/launch_gb300-nv.sh"
+PREFLIGHT_PATH = REPO_ROOT / "runners/preflight_gb300_nkx.sh"
 
 
 def test_recipe_declares_enabled_dcgm_power_lane():
@@ -88,3 +89,31 @@ def test_launcher_prefetches_arm64_compute_environment_on_login_node():
     assert 'UV_PROJECT_ENVIRONMENT="$SRT_REPO_DIR/.venv-compute"' in launcher
     assert "uv sync --python /usr/bin/python3.12" in launcher
     assert "--python-platform aarch64-unknown-linux-gnu --no-dev" in launcher
+
+
+def test_nkx_dsv4_lane_reuses_validated_cluster_contract():
+    launcher = LAUNCHER_PATH.read_text()
+
+    assert "deb1dfd9934398664f92d194169c183e009da83b" in launcher
+    assert "deepseek-ai--DeepSeek-V4-Pro-ed9e8d533b48" in launcher
+    assert "ed9e8d533b4866d9c92ba28f968d1905339bf0a3be5e1dcb5b506c88928318fa" in launcher
+    assert "864739867846" in launcher
+    assert 'SRT_UCX_TLS:-rc,cuda_ipc,cuda_copy,sm,self,tcp' in launcher
+    assert 'SRT_TRTLLM_ENABLE_PDL:-0' in launcher
+    assert 'NCCL_NET_PLUGIN: \\"none\\"' in launcher
+    assert 'NVSHMEM_ENABLE_NIC_PE_MAPPING: \\"1\\"' in launcher
+    assert "rocep161s0:1" in launcher
+    assert "rocep202s0:1" in launcher
+    assert '"$GITHUB_WORKSPACE/runners/preflight_gb300_nkx.sh"' in launcher
+
+
+def test_nkx_preflight_checks_all_nodes_before_full_benchmark():
+    preflight = PREFLIGHT_PATH.read_text()
+
+    assert 'expected_nodes="${NKX_EXPECTED_GPU_NODES:-16}"' in preflight
+    assert 'scontrol show topology' in preflight
+    assert '/sys/class/infiniband/$hca/ports/1/link_layer' in preflight
+    assert 'test -x /usr/bin/nvidia-imex-ctl' in preflight
+    assert 'NCCL_NET_PLUGIN=none' in preflight
+    assert 'collective=ok' in preflight
+    assert 'GDRDMA' in preflight

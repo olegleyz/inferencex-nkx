@@ -9,31 +9,27 @@ permissions:
 jobs:
   preflight:
     runs-on: [self-hosted, gb300-nv]
-    timeout-minutes: 10
+    timeout-minutes: 25
     steps:
-      - name: Validate Slurm and shared storage
+      - uses: actions/checkout@v4
+
+      - name: Validate the complete NKX GB300 runtime contract
         shell: bash
         run: |
           set -euo pipefail
 
           : "${SLURM_ACCOUNT:?runner environment must set SLURM_ACCOUNT}"
           : "${SLURM_PARTITION:?runner environment must set SLURM_PARTITION}"
-          : "${MODEL_PATH_OVERRIDE:?runner environment must set MODEL_PATH_OVERRIDE}"
           : "${INFERENCEX_CACHE_ROOT:?runner environment must set INFERENCEX_CACHE_ROOT}"
 
           test "$(uname -m)" = "x86_64"
           command -v squeue
           command -v srun
           command -v sbatch
-          test -r "${MODEL_PATH_OVERRIDE}/config.json"
           test -d "${INFERENCEX_CACHE_ROOT}"
 
           squeue --me
-          srun \
-            --account="${SLURM_ACCOUNT}" \
-            --partition="${SLURM_PARTITION}" \
-            --nodes=1 \
-            --ntasks=1 \
-            --time=00:02:00 \
-            --export=ALL \
-            bash -lc 'test -r "${MODEL_PATH_OVERRIDE}/config.json"; test -d "${INFERENCEX_CACHE_ROOT}"; hostname'
+          export NKX_MODEL_PATH="/scratch/benchops-$(id -un)/models/deepseek-ai--DeepSeek-V4-Pro-ed9e8d533b48"
+          export NKX_IMAGE_SQUASH="${INFERENCEX_CACHE_ROOT}/squash/nvcr.io_nvidia_ai-dynamo_tensorrtllm-runtime_1.3.0-deepseek-v4-dev.1.sqsh"
+          export NKX_EXPECTED_GPU_NODES=16
+          runners/preflight_gb300_nkx.sh

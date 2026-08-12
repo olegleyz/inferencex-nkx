@@ -17,6 +17,16 @@ export SRT_UCX_TLS="${SRT_UCX_TLS:-rc,cuda_ipc,cuda_copy,sm,self,tcp}"
 # and overridable while preserving the rest of the reviewed recipe.
 export SRT_TRTLLM_ENABLE_PDL="${SRT_TRTLLM_ENABLE_PDL:-0}"
 
+# Cluster-scoped DSv4 contract learned from the validated BenchOps runs. The
+# checkpoint is staged atomically and digest-marked on every GPU worker's NVMe.
+# Keep the values overridable, but do not fall back to the 864 GB shared-FS
+# copy on this NKX runner.
+export NKX_DSV4_MODEL_PATH="${NKX_DSV4_MODEL_PATH:-/scratch/benchops-$(id -un)/models/deepseek-ai--DeepSeek-V4-Pro-ed9e8d533b48}"
+export NKX_DSV4_MODEL_DIGEST="${NKX_DSV4_MODEL_DIGEST:-ed9e8d533b4866d9c92ba28f968d1905339bf0a3be5e1dcb5b506c88928318fa}"
+export NKX_DSV4_MODEL_BYTES="${NKX_DSV4_MODEL_BYTES:-864739867846}"
+export NKX_GPU_NODES="${NKX_GPU_NODES:-16}"
+export SRT_NVSHMEM_HCA_LIST="${SRT_NVSHMEM_HCA_LIST:-rocep161s0:1,rocep162s0:1,rocep172s0:1,rocep173s0:1,rocep190s0:1,rocep191s0:1,rocep201s0:1,rocep202s0:1}"
+
 # The official runner uses /data/home/sa-shared/gharunners. Other GB300
 # clusters can override the shared root without changing benchmark recipes.
 export INFERENCEX_CACHE_ROOT="${INFERENCEX_CACHE_ROOT:-/data/home/sa-shared/gharunners}"
@@ -110,6 +120,9 @@ fi
 # mapping by default while allowing another GB300 runner to expose the same
 # model from its own shared storage.
 export MODEL_PATH="${MODEL_PATH_OVERRIDE:-$MODEL_PATH}"
+if [[ "$FRAMEWORK" == "dynamo-trt" && "$MODEL_PREFIX" == "dsv4" ]]; then
+    export MODEL_PATH="$NKX_DSV4_MODEL_PATH"
+fi
 
 NGINX_IMAGE="nginx:1.27.4"
 
@@ -148,6 +161,15 @@ import_squash() {
 
 import_squash "$SQUASH_FILE" "$IMAGE"
 import_squash "$NGINX_SQUASH_FILE" "$NGINX_IMAGE"
+
+if [[ "$FRAMEWORK" == "dynamo-trt" && "$MODEL_PREFIX" == "dsv4" ]]; then
+    NKX_MODEL_PATH="$MODEL_PATH" \
+    NKX_IMAGE_SQUASH="$SQUASH_FILE" \
+    NKX_EXPECTED_GPU_NODES="$NKX_GPU_NODES" \
+    NKX_EXPECTED_MODEL_DIGEST="$NKX_DSV4_MODEL_DIGEST" \
+    NKX_EXPECTED_MODEL_BYTES="$NKX_DSV4_MODEL_BYTES" \
+        "$GITHUB_WORKSPACE/runners/preflight_gb300_nkx.sh"
+fi
 
 # Power lane detection: a recipe opts in via an enabled dcgm-power telemetry
 # block. CONFIG_FILE is srt-slurm-relative; resolve it against the workspace
@@ -338,7 +360,8 @@ elif [[ $FRAMEWORK == "dynamo-trt" && $MODEL_PREFIX == "dsv4" ]]; then
     SRT_SLURM_MODEL_PREFIX="deepseek-ai/DeepSeek-V4-Pro"
     git clone https://github.com/NVIDIA/srt-slurm.git "$SRT_REPO_DIR"
     cd "$SRT_REPO_DIR"
-    git checkout sa-submission-q2-2026
+    git checkout deb1dfd9934398664f92d194169c183e009da83b
+    test "$(git rev-parse HEAD)" = deb1dfd9934398664f92d194169c183e009da83b
 elif [[ $FRAMEWORK == "dynamo-trt" && $MODEL_PREFIX == "qwen3.5" && $PRECISION == "fp4" ]]; then
     git clone https://github.com/NVIDIA/srt-slurm.git "$SRT_REPO_DIR"
     cd "$SRT_REPO_DIR"
@@ -513,6 +536,19 @@ if [[ "$FRAMEWORK" == "dynamo-trt" && "$MODEL_PREFIX" == "dsv4" ]]; then
         exit 1
     fi
     echo "Applied TRTLLM_ENABLE_PDL=${SRT_TRTLLM_ENABLE_PDL} to ${PDL_ENTRIES} entries in $CONFIG_PATH"
+
+    for section in prefill_environment decode_environment; do
+        section_line=$(grep -nE "^[[:space:]]{2}${section}:$" "$CONFIG_PATH" | cut -d: -f1)
+        if [[ -z "$section_line" ]]; then
+            echo "Error: selected DSv4 recipe has no ${section}: $CONFIG_PATH" >&2
+            exit 1
+        fi
+        sed -i "${section_line}a\\    NCCL_NET_PLUGIN: \"none\"\n    NVSHMEM_ENABLE_NIC_PE_MAPPING: \"1\"\n    NVSHMEM_HCA_LIST: \"${SRT_NVSHMEM_HCA_LIST}\"" "$CONFIG_PATH"
+    done
+    test "$(grep -cE '^[[:space:]]+NCCL_NET_PLUGIN: \"none\"$' "$CONFIG_PATH")" -eq 2
+    test "$(grep -cE '^[[:space:]]+NVSHMEM_ENABLE_NIC_PE_MAPPING: \"1\"$' "$CONFIG_PATH")" -eq 2
+    test "$(grep -cF "NVSHMEM_HCA_LIST: \"${SRT_NVSHMEM_HCA_LIST}\"" "$CONFIG_PATH")" -eq 2
+    echo "Applied explicit NVSHMEM RoCE mapping to prefill and decode environments"
 fi
 
 sed -i "s/^name:.*/name: \"${RUNNER_NAME}\"/" "$CONFIG_PATH"
