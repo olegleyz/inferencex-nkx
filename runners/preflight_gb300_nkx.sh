@@ -169,4 +169,60 @@ if grep -Eq 'libnccl-net-ofi|NET/Plugin: Could not find: ofi' "$log_dir/collecti
     exit 1
 fi
 
+mnnvl_check=$(cat <<'EOF'
+set -euo pipefail
+export NCCL_DEBUG=INFO
+export NCCL_CUMEM_ENABLE=1
+export NCCL_MNNVL_ENABLE=1
+export NCCL_NET_PLUGIN=none
+python3 - <<'PY'
+import os
+import torch
+import torch.distributed as dist
+
+rank = int(os.environ["SLURM_PROCID"])
+local_rank = int(os.environ["SLURM_LOCALID"])
+torch.cuda.set_device(local_rank)
+dist.init_process_group(
+    "nccl",
+    init_method="file:///nkx-preflight/mnnvl-rendezvous",
+    rank=rank,
+    world_size=8,
+)
+value = torch.tensor([rank + 1.0], device=f"cuda:{local_rank}")
+dist.all_reduce(value)
+assert value.item() == 36.0, (rank, value.item())
+torch.cuda.synchronize()
+dist.destroy_process_group()
+print(f"rank={rank} mnnvl=ok")
+PY
+EOF
+)
+
+echo "Running the exact 2-node/8-rank TensorRT-LLM MNNVL canary..."
+rm -f "$log_dir/mnnvl-rendezvous"
+srun \
+  --account="$SLURM_ACCOUNT" \
+  --partition="$SLURM_PARTITION" \
+  --nodes=2 \
+  --ntasks=8 \
+  --ntasks-per-node=4 \
+  --gpus-per-node=4 \
+  --cpus-per-task=1 \
+  --exclusive \
+  --time=00:08:00 \
+  --container-image="$NKX_IMAGE_SQUASH" \
+  --container-mounts="$log_dir:/nkx-preflight" \
+  --no-container-entrypoint \
+  --no-container-mount-home \
+  bash -c "$mnnvl_check" </dev/null 2>&1 | tee "$log_dir/mnnvl.log"
+
+test "$(grep -c 'mnnvl=ok' "$log_dir/mnnvl.log")" -eq 8
+grep -q 'P2P/MNNVL' "$log_dir/mnnvl.log"
+grep -q 'MNNVL 1' "$log_dir/mnnvl.log"
+if grep -q 'NCCL WARN' "$log_dir/mnnvl.log"; then
+    echo "NCCL emitted a warning in the MNNVL canary" >&2
+    exit 1
+fi
+
 echo "NKX GB300 preflight passed on ${expected_nodes} nodes."

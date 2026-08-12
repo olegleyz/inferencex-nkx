@@ -26,6 +26,8 @@ export NKX_DSV4_MODEL_DIGEST="${NKX_DSV4_MODEL_DIGEST:-ed9e8d533b4866d9c92ba28f9
 export NKX_DSV4_MODEL_BYTES="${NKX_DSV4_MODEL_BYTES:-864739867846}"
 export NKX_GPU_NODES="${NKX_GPU_NODES:-16}"
 export SRT_NVSHMEM_HCA_LIST="${SRT_NVSHMEM_HCA_LIST:-rocep161s0:1,rocep162s0:1,rocep172s0:1,rocep173s0:1,rocep190s0:1,rocep191s0:1,rocep201s0:1,rocep202s0:1}"
+export SRT_NCCL_MNNVL_ENABLE="${SRT_NCCL_MNNVL_ENABLE:-1}"
+export SRT_NCCL_CUMEM_ENABLE="${SRT_NCCL_CUMEM_ENABLE:-1}"
 
 # The official runner uses /data/home/sa-shared/gharunners. Other GB300
 # clusters can override the shared root without changing benchmark recipes.
@@ -543,8 +545,10 @@ if [[ "$FRAMEWORK" == "dynamo-trt" && "$MODEL_PREFIX" == "dsv4" ]]; then
             echo "Error: selected DSv4 recipe has no ${section}: $CONFIG_PATH" >&2
             exit 1
         fi
-        sed -i "${section_line}a\\    NCCL_NET_PLUGIN: \"none\"\n    NVSHMEM_ENABLE_NIC_PE_MAPPING: \"1\"\n    NVSHMEM_HCA_LIST: \"${SRT_NVSHMEM_HCA_LIST}\"" "$CONFIG_PATH"
+        sed -i "${section_line}a\\    NCCL_CUMEM_ENABLE: \"${SRT_NCCL_CUMEM_ENABLE}\"\n    NCCL_MNNVL_ENABLE: \"${SRT_NCCL_MNNVL_ENABLE}\"\n    NCCL_NET_PLUGIN: \"none\"\n    NVSHMEM_ENABLE_NIC_PE_MAPPING: \"1\"\n    NVSHMEM_HCA_LIST: \"${SRT_NVSHMEM_HCA_LIST}\"" "$CONFIG_PATH"
     done
+    test "$(grep -cE "^[[:space:]]+NCCL_CUMEM_ENABLE: \"${SRT_NCCL_CUMEM_ENABLE}\"$" "$CONFIG_PATH")" -eq 2
+    test "$(grep -cE "^[[:space:]]+NCCL_MNNVL_ENABLE: \"${SRT_NCCL_MNNVL_ENABLE}\"$" "$CONFIG_PATH")" -eq 2
     test "$(grep -cE '^[[:space:]]+NCCL_NET_PLUGIN: \"none\"$' "$CONFIG_PATH")" -eq 2
     test "$(grep -cE '^[[:space:]]+NVSHMEM_ENABLE_NIC_PE_MAPPING: \"1\"$' "$CONFIG_PATH")" -eq 2
     test "$(grep -cF "NVSHMEM_HCA_LIST: \"${SRT_NVSHMEM_HCA_LIST}\"" "$CONFIG_PATH")" -eq 2

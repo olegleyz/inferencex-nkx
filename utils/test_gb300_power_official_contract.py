@@ -100,6 +100,10 @@ def test_nkx_dsv4_lane_reuses_validated_cluster_contract():
     assert "864739867846" in launcher
     assert 'SRT_UCX_TLS:-rc,cuda_ipc,cuda_copy,sm,self,tcp' in launcher
     assert 'SRT_TRTLLM_ENABLE_PDL:-0' in launcher
+    assert 'SRT_NCCL_MNNVL_ENABLE:-1' in launcher
+    assert 'SRT_NCCL_CUMEM_ENABLE:-1' in launcher
+    assert 'NCCL_MNNVL_ENABLE: \\"${SRT_NCCL_MNNVL_ENABLE}\\"' in launcher
+    assert 'NCCL_CUMEM_ENABLE: \\"${SRT_NCCL_CUMEM_ENABLE}\\"' in launcher
     assert 'NCCL_NET_PLUGIN: \\"none\\"' in launcher
     assert 'NVSHMEM_ENABLE_NIC_PE_MAPPING: \\"1\\"' in launcher
     assert "rocep161s0:1" in launcher
@@ -117,3 +121,6 @@ def test_nkx_preflight_checks_all_nodes_before_full_benchmark():
     assert 'NCCL_NET_PLUGIN=none' in preflight
     assert 'collective=ok' in preflight
     assert 'GDRDMA' in preflight
+    assert 'mnnvl=ok' in preflight
+    assert 'P2P/MNNVL' in preflight
+    assert '--ntasks-per-node=4' in preflight
