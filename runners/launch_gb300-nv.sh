@@ -437,8 +437,8 @@ sed -i "s/^name:.*/name: \"${RUNNER_NAME}\"/" "$CONFIG_PATH"
 # Cluster profiles may add scheduler/runtime inputs to the resolved recipe.
 # This runs after the reviewed recipe is overlaid into the pinned srt-slurm
 # checkout, and the generated config and Slurm script remain native artifacts.
-if [[ -n "${SRT_SLURM_CPUS_PER_TASK:-}" || -n "${SRT_SLURM_ETCD_LEASE_TTL:-}" || -n "${SRT_SLURM_HEALTH_MAX_ATTEMPTS:-}" || -n "${SRT_SLURM_RUNTIME_ENV_JSON:-}" ]]; then
-    export CONFIG_PATH SRT_SLURM_CPUS_PER_TASK SRT_SLURM_ETCD_LEASE_TTL SRT_SLURM_HEALTH_MAX_ATTEMPTS SRT_SLURM_RUNTIME_ENV_JSON
+if [[ -n "${SRT_SLURM_CPUS_PER_TASK:-}" || -n "${SRT_SLURM_TIME_LIMIT:-}" || -n "${SRT_SLURM_ETCD_LEASE_TTL:-}" || -n "${SRT_SLURM_HEALTH_MAX_ATTEMPTS:-}" || -n "${SRT_SLURM_RUNTIME_ENV_JSON:-}" ]]; then
+    export CONFIG_PATH SRT_SLURM_CPUS_PER_TASK SRT_SLURM_TIME_LIMIT SRT_SLURM_ETCD_LEASE_TTL SRT_SLURM_HEALTH_MAX_ATTEMPTS SRT_SLURM_RUNTIME_ENV_JSON
     python - <<'PY'
 import os
 import json
@@ -460,6 +460,16 @@ if cpus:
     if existing not in (None, cpus, int(cpus)):
         raise RuntimeError("reviewed recipe already defines a different cpus-per-task")
     directives["cpus-per-task"] = cpus
+
+time_limit = os.environ.get("SRT_SLURM_TIME_LIMIT")
+if time_limit:
+    parts = time_limit.split(":")
+    if len(parts) != 3 or any(not part.isdigit() for part in parts):
+        raise RuntimeError("SRT_SLURM_TIME_LIMIT must use HH:MM:SS")
+    slurm = document.setdefault("slurm", {})
+    if not isinstance(slurm, dict):
+        raise RuntimeError("reviewed recipe slurm field must be a mapping")
+    slurm["time_limit"] = time_limit
 
 attempts = os.environ.get("SRT_SLURM_HEALTH_MAX_ATTEMPTS")
 if attempts:

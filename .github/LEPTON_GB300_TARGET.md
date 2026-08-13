@@ -15,6 +15,7 @@ partition, storage, model receipt, or RoCE device mapping.
 | Slurm cluster | `nkx-slinky-dev-02` |
 | Partition/account | `batch` / `nvidia` |
 | CPUs per task | 140 |
+| Slurm time limit | `04:00:00` (Lepton `batch` maximum) |
 | Shared root | `/scratch/fsw` |
 | Node-local model | `/raid/scratch/benchops-oleizerov/models/DeepSeek-V4-Pro-b5968e9190ef` |
 | Profile | `runners/cluster_profiles/lepton-gb300.sh` |

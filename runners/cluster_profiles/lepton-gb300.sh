@@ -17,6 +17,7 @@ export SQUASH_CACHE_HOST_PATH="/scratch/fsw/users/oleizerov/.benchops/images"
 export SRT_SLURM_HOME_PATH="/scratch/fsw/users/oleizerov"
 export SRT_SLURM_SHARED_ROOT="/scratch/fsw"
 export SRT_SLURM_CPUS_PER_TASK="140"
+export SRT_SLURM_TIME_LIMIT="04:00:00"
 
 # Exact source and image identities shared with the reviewed DSv4 baseline.
 export SRT_SLURM_DSV4_REF="758becd9d18dcab1fb722abc1875d73ee81a20cb"
