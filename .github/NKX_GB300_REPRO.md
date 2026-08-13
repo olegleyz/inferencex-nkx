@@ -40,6 +40,11 @@ supplies only the cluster inputs recovered from job `2024`:
 - the effective job-2024 health limit (720 attempts) and etcd lease TTL
   (600 seconds).
 
+This public fork does not define upstream's repository PAT secret. Its
+read-only benchmark and result-collector checkouts therefore use GitHub's
+workflow-scoped `github.token`; this changes repository authentication only,
+not benchmark source, recipe, image, model, or runtime behavior.
+
 The model path is an equivalent physical input, not a recipe change. BenchOps
 stages the pinned revision to
 `/scratch/models/DeepSeek-V4-Pro-b5968e9190ef` on every GPU worker. The
