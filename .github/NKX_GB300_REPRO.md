@@ -235,3 +235,62 @@ validated the shared image, model receipt, setup composition, transport path,
 and native artifact collection. Dispatch the broader matrix with the normal
 workflow defaults: `readiness-only=false`, `fail-fast=false`, and the native
 matrix fan-out. Slurm remains authoritative for each recipe's allocation.
+
+## Accepted broader matrix sweep
+
+The native matrix completed successfully in
+[GitHub Actions run 31665151409](https://github.com/olegleyz/inferencex-nkx/actions/runs/31665151409)
+at exact source commit
+`8d41115141aed811b848fbe9647ca4403dcc0bc6`. All six matrix jobs concluded
+`success`. GitHub Actions used the normal matrix fan-out; the jobs ran one at a
+time because one matching `gb300-nv` self-hosted runner was available, not
+because the workflow or NKX adapter serialized them.
+
+An earlier dispatch, run `31665133763`, passed a mistyped expanded ref and was
+cancelled before any benchmark Slurm submission. It is not benchmark evidence.
+Run `31665151409` used the exact pushed commit above.
+
+| Configuration | GitHub job | Slurm job | Completed requests | Output tokens/s | BenchOps mean | Difference |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| `1p6d-dep4-tp4` | `94338053611` | `2415` | 1,920 | 6,903.19 | 6,911.09 | -0.11% |
+| `1p9d-tep4-tp4` | `94338053655` | `2435` | 180 | 1,368.78 | 1,284.42 | +6.57% |
+| `4p1d-dep4-dep8` | `94338053621` | `2419` | 40,960 | 30,517.74 | 30,428.89 | +0.29% |
+| `5p1d-dep4-dep8` | `94338053653` | `2423` | 40,960 | 37,677.32 | 37,536.85 | +0.37% |
+| `6p1d-dep4-dep8` | `94338053648` | `2431` | 40,960 | 44,547.54 | 44,419.36 | +0.29% |
+| `7p2d-dep4-dep16` | `94338053631` | `2427` | 30,720 | 50,513.81 | 50,132.01 | +0.76% |
+
+The five higher-throughput points reproduced their three-run BenchOps means
+within 0.76%. The low-concurrency `1p9d` point is 6.57% above its BenchOps
+mean, so it is recorded as a notable latency difference rather than silently
+treated as identical. It processed the same 1,322,947 input tokens and
+165,777 output tokens as BenchOps jobs `2122`, `2125`, and `2128`. Its TPOT
+was 11.532 ms, inside the prior 11.525-11.543 ms range, while mean TTFT was
+1,057.91 ms instead of 1,696.93-1,907.01 ms. The shorter TTFT reduced the
+180-request duration from the prior 127.77-131.29 seconds to 121.11 seconds
+and explains the higher whole-run output throughput. Repeats are required if
+the purpose is to characterize that low-concurrency latency improvement; no
+recipe, model, image, or runtime change was introduced to explain it.
+
+The run-level `results_bmk` artifact (`9174268222`) contains all six aggregate
+records and has GitHub artifact digest
+`sha256:51a438a6080b1d0fe38543f56ddf49bc9e873814c1e7f1457604a9e79049347b`.
+Each matrix point also uploaded its individual aggregate JSON, the validated
+model-stage receipt, and a server-log archive. The archives were downloaded
+and audited: every one contains the resolved `config.yaml`, generated
+`sbatch_script.sh`, raw `results_concurrency_*.json`, `benchmark-rollup.json`,
+`sweep_<job>.log`, and all frontend/prefill/decode worker logs.
+
+| Configuration | Result artifact | Server-log artifact | Server-log artifact digest |
+| --- | ---: | ---: | --- |
+| `1p6d-dep4-tp4` | `9168063011` | `9168063586` | `sha256:5cbae077fd9891f5d88b811666e944ff984ddd1b6beaaf4afa13eb7c78964bfc` |
+| `1p9d-tep4-tp4` | `9174260753` | `9174261293` | `sha256:e249298d3867b181aa67a540c916560ad2b38311fea6b69e6905408ac0d60446` |
+| `4p1d-dep4-dep8` | `9169395744` | `9169401347` | `sha256:52add236e086743fd407232c96dc78b589d6fa5dde11b38fe8187babaefb7275` |
+| `5p1d-dep4-dep8` | `9170796278` | `9170802902` | `sha256:fb675bd80cc61a7fa7f911822898fa34c30bbca57dc95ff4bb5662845369f185` |
+| `6p1d-dep4-dep8` | `9173733700` | `9173740325` | `sha256:90b8cbda7543bc94d0d416f12ed6f4ab0fa85eb3285b3a7158edc1ea03146b5f` |
+| `7p2d-dep4-dep16` | `9172017896` | `9172022006` | `sha256:5ecdd007758e46c661ee3dfa2f26ef0e5fe81511d67b1ecd2faaae6d52ad3466` |
+
+GitHub reports these native artifacts as unexpired through
+`2026-11-11T03:50:56Z`. Their artifact IDs, digests, exact source commit, and
+the checked-in selector above provide the review and rerun handoff; the
+benchmark path did not invoke BenchOps after receipt validation, touch
+`gb300l`, or select TensorRT-LLM.
