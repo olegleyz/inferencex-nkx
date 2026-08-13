@@ -329,6 +329,8 @@ jobs:
             .clusterId == "nkx-slinky-gb300-dev-01" and
             .model.repository == "deepseek-ai/DeepSeek-V4-Pro" and
             .model.revision == "b5968e9190ef611bbf34a7229255be88a0e937c1" and
+            .verification.mode == "full-sha256" and
+            .verification.requireAllTargets == true and
             .nodes.required == 16 and
             .nodes.verified == 16 and
             ([.nodes.results[].node] | length) == 16 and

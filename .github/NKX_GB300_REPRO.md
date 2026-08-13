@@ -11,12 +11,14 @@ the Lepton-managed `gb300l` cluster.
 | --- | --- |
 | InferenceX base | `d089a9138c53d16c6388e4251a078fee8ca7bea6` |
 | srt-slurm | `758becd9d18dcab1fb722abc1875d73ee81a20cb` |
+| BenchOps model staging | `d933853` |
 | Image | `vllm/vllm-openai:dsv4-megamoe-mxfp4-arm64-cu130-4ba0a72` |
 | Image SquashFS SHA-256 | `c8dc9884c5c863170f2207840e44a18c92af292c9829ad48c3d89b3cd87ddaff` |
 | nginx image | `nginx:1.27.4` |
 | nginx SquashFS SHA-256 | `61e003876ea0b3b78c5745e261056544fe4e997e7c79b73d62c31d7d28483a1a` |
 | Hugging Face model | `deepseek-ai/DeepSeek-V4-Pro` |
 | Model revision | `b5968e9190ef611bbf34a7229255be88a0e937c1` |
+| Model manifest SHA-256 | `sha256:5c7c518159b3c7d0780d947846669693b16fe79f114b2010dd29769647eaa40d` |
 | Recipe | `recipes/vllm/deepseek-v4/8k1k/disagg-gb300-6p1d-dep4-dep8-32-c4096.yaml` |
 | Topology | 6 prefill workers (TP4/EP4), 1 decode worker (TP8/EP8) |
 | Traffic | ISL 8192, OSL 1024, concurrency 4096, 40,960 requests |
@@ -52,7 +54,8 @@ smaller explicitly pinned allocations under `topology/block`. Both BenchOps
 staging and the benchmark's immediate read-only preflight therefore request
 all 16 nodes without `--nodelist`; one task runs per worker and validates its
 actual `SLURMD_NODENAME` against the immutable receipt. Staging still limits
-copy and full-checksum work to four workers at a time.
+copy work to four workers at a time. The explicit full audit hashes all local
+copies in one all-target allocation, one task per worker.
 
 Job `2024`'s archived configuration and generated Slurm script show the
 upstream `vllm-container-deps.sh` setup and do not expose an additional UCX
@@ -92,8 +95,13 @@ uv run benchops model stage \
 
 Do not dispatch unless the final receipt has `state == "ready"`, identifies
 the NKX cluster and exact model revision above, and reports
-`nodes.required == nodes.verified == 16`. Commit that final receipt in this
-repository so the workflow run and exact source commit preserve it together.
+`verification.mode == "full-sha256"` and
+`nodes.required == nodes.verified == 16`. The audited receipt used for this
+reproduction is committed at
+`model-stages/receipts/deepseek-v4-pro-gb300-b5968e9190ef.json`, so the
+workflow run and exact source commit preserve it together. Slurm job `2397`
+performed the initial 16-node staging (`4 reused`, `12 copied`); job `2400`
+performed the final all-node full SHA-256 audit recorded in that receipt.
 
 ## Generate exactly one reviewed point
 

@@ -1,0 +1,186 @@
+{
+  "clusterId": "nkx-slinky-gb300-dev-01",
+  "localPath": "/scratch/models/DeepSeek-V4-Pro-b5968e9190ef",
+  "manifestDigest": "sha256:5c7c518159b3c7d0780d947846669693b16fe79f114b2010dd29769647eaa40d",
+  "model": {
+    "repository": "deepseek-ai/DeepSeek-V4-Pro",
+    "revision": "b5968e9190ef611bbf34a7229255be88a0e937c1",
+    "source": "huggingface"
+  },
+  "nodes": {
+    "copied": 0,
+    "failed": 0,
+    "required": 16,
+    "results": [
+      {
+        "availableBytes": 27661454229504,
+        "fileCount": 91,
+        "manifestDigest": "sha256:5c7c518159b3c7d0780d947846669693b16fe79f114b2010dd29769647eaa40d",
+        "node": "ip-100-64-134-242",
+        "path": "/scratch/models/DeepSeek-V4-Pro-b5968e9190ef",
+        "requiredBytes": 864739856856,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27660687273984,
+        "fileCount": 91,
+        "manifestDigest": "sha256:5c7c518159b3c7d0780d947846669693b16fe79f114b2010dd29769647eaa40d",
+        "node": "ip-100-64-138-242",
+        "path": "/scratch/models/DeepSeek-V4-Pro-b5968e9190ef",
+        "requiredBytes": 864739856856,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27661462441984,
+        "fileCount": 91,
+        "manifestDigest": "sha256:5c7c518159b3c7d0780d947846669693b16fe79f114b2010dd29769647eaa40d",
+        "node": "ip-100-64-148-224",
+        "path": "/scratch/models/DeepSeek-V4-Pro-b5968e9190ef",
+        "requiredBytes": 864739856856,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27661451935744,
+        "fileCount": 91,
+        "manifestDigest": "sha256:5c7c518159b3c7d0780d947846669693b16fe79f114b2010dd29769647eaa40d",
+        "node": "ip-100-64-173-209",
+        "path": "/scratch/models/DeepSeek-V4-Pro-b5968e9190ef",
+        "requiredBytes": 864739856856,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27661428641792,
+        "fileCount": 91,
+        "manifestDigest": "sha256:5c7c518159b3c7d0780d947846669693b16fe79f114b2010dd29769647eaa40d",
+        "node": "ip-100-64-181-193",
+        "path": "/scratch/models/DeepSeek-V4-Pro-b5968e9190ef",
+        "requiredBytes": 864739856856,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27661444239360,
+        "fileCount": 91,
+        "manifestDigest": "sha256:5c7c518159b3c7d0780d947846669693b16fe79f114b2010dd29769647eaa40d",
+        "node": "ip-100-64-195-223",
+        "path": "/scratch/models/DeepSeek-V4-Pro-b5968e9190ef",
+        "requiredBytes": 864739856856,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27661453893632,
+        "fileCount": 91,
+        "manifestDigest": "sha256:5c7c518159b3c7d0780d947846669693b16fe79f114b2010dd29769647eaa40d",
+        "node": "ip-100-64-211-112",
+        "path": "/scratch/models/DeepSeek-V4-Pro-b5968e9190ef",
+        "requiredBytes": 864739856856,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27661322506240,
+        "fileCount": 91,
+        "manifestDigest": "sha256:5c7c518159b3c7d0780d947846669693b16fe79f114b2010dd29769647eaa40d",
+        "node": "ip-100-64-212-204",
+        "path": "/scratch/models/DeepSeek-V4-Pro-b5968e9190ef",
+        "requiredBytes": 864739856856,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27661446606848,
+        "fileCount": 91,
+        "manifestDigest": "sha256:5c7c518159b3c7d0780d947846669693b16fe79f114b2010dd29769647eaa40d",
+        "node": "ip-100-64-216-168",
+        "path": "/scratch/models/DeepSeek-V4-Pro-b5968e9190ef",
+        "requiredBytes": 864739856856,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27661451501568,
+        "fileCount": 91,
+        "manifestDigest": "sha256:5c7c518159b3c7d0780d947846669693b16fe79f114b2010dd29769647eaa40d",
+        "node": "ip-100-64-226-161",
+        "path": "/scratch/models/DeepSeek-V4-Pro-b5968e9190ef",
+        "requiredBytes": 864739856856,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27661449617408,
+        "fileCount": 91,
+        "manifestDigest": "sha256:5c7c518159b3c7d0780d947846669693b16fe79f114b2010dd29769647eaa40d",
+        "node": "ip-100-64-232-100",
+        "path": "/scratch/models/DeepSeek-V4-Pro-b5968e9190ef",
+        "requiredBytes": 864739856856,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27660447625216,
+        "fileCount": 91,
+        "manifestDigest": "sha256:5c7c518159b3c7d0780d947846669693b16fe79f114b2010dd29769647eaa40d",
+        "node": "ip-100-64-237-78",
+        "path": "/scratch/models/DeepSeek-V4-Pro-b5968e9190ef",
+        "requiredBytes": 864739856856,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27661455167488,
+        "fileCount": 91,
+        "manifestDigest": "sha256:5c7c518159b3c7d0780d947846669693b16fe79f114b2010dd29769647eaa40d",
+        "node": "ip-100-64-239-237",
+        "path": "/scratch/models/DeepSeek-V4-Pro-b5968e9190ef",
+        "requiredBytes": 864739856856,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27661384257536,
+        "fileCount": 91,
+        "manifestDigest": "sha256:5c7c518159b3c7d0780d947846669693b16fe79f114b2010dd29769647eaa40d",
+        "node": "ip-100-64-248-153",
+        "path": "/scratch/models/DeepSeek-V4-Pro-b5968e9190ef",
+        "requiredBytes": 864739856856,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27660686581760,
+        "fileCount": 91,
+        "manifestDigest": "sha256:5c7c518159b3c7d0780d947846669693b16fe79f114b2010dd29769647eaa40d",
+        "node": "ip-100-64-252-30",
+        "path": "/scratch/models/DeepSeek-V4-Pro-b5968e9190ef",
+        "requiredBytes": 864739856856,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27660679512064,
+        "fileCount": 91,
+        "manifestDigest": "sha256:5c7c518159b3c7d0780d947846669693b16fe79f114b2010dd29769647eaa40d",
+        "node": "ip-100-64-254-227",
+        "path": "/scratch/models/DeepSeek-V4-Pro-b5968e9190ef",
+        "requiredBytes": 864739856856,
+        "state": "reused"
+      }
+    ],
+    "reused": 16,
+    "verified": 16
+  },
+  "recordPath": "/Users/oleizerov/Documents/code/ai-cluster-benchmarking/.benchops/model-stages/deepseek-v4-pro-gb300/20260813T015922720795Z",
+  "requiredModelBytes": 864739856856,
+  "schemaVersion": 1,
+  "sharedCopy": {
+    "availableBytes": 1673232908288,
+    "fileCount": 91,
+    "manifestDigest": "sha256:5c7c518159b3c7d0780d947846669693b16fe79f114b2010dd29769647eaa40d",
+    "node": "nkx-slinky-gb300-dev-01-login-01",
+    "path": "/scratch/fsw/users/oleizerov/models/DeepSeek-V4-Pro-b5968e9190ef",
+    "requiredBytes": 864739856856,
+    "state": "valid"
+  },
+  "sharedPath": "/scratch/fsw/users/oleizerov/models/DeepSeek-V4-Pro-b5968e9190ef",
+  "state": "ready",
+  "transfer": {
+    "concurrency": 4,
+    "estimatedBytes": 0,
+    "nodesRequired": []
+  },
+  "verification": {
+    "mode": "full-sha256",
+    "requireAllTargets": true
+  }
+}
