@@ -10,6 +10,10 @@ case "${INFERENCEX_CLUSTER_PROFILE:-}" in
         # shellcheck source=runners/cluster_profiles/nkx-gb300.sh
         source "${GITHUB_WORKSPACE}/runners/cluster_profiles/nkx-gb300.sh"
         ;;
+    lepton-gb300)
+        # shellcheck source=runners/cluster_profiles/lepton-gb300.sh
+        source "${GITHUB_WORKSPACE}/runners/cluster_profiles/lepton-gb300.sh"
+        ;;
     *)
         echo "Unsupported InferenceX cluster profile: ${INFERENCEX_CLUSTER_PROFILE}" >&2
         exit 1
@@ -19,6 +23,24 @@ esac
 export SLURM_PARTITION="${SLURM_PARTITION:-batch_1}"
 export SLURM_ACCOUNT="${SLURM_ACCOUNT:-benchmark}"
 export ENROOT_ROOTFS_WRITABLE=1
+
+# A target-specific job must be attached to the intended Slurm controller.
+# This check runs before any srun/sbatch operation or cache preparation.
+if [[ -n "${INFERENCEX_EXPECTED_SLURM_CLUSTER:-}" ]]; then
+    ACTUAL_SLURM_CLUSTER=$(
+        scontrol show config | awk -F= '/^ClusterName[[:space:]]*=/ {
+            value=$2; gsub(/^[[:space:]]+|[[:space:]]+$/, "", value); print value
+        }'
+    )
+    if [[ "$ACTUAL_SLURM_CLUSTER" != "$INFERENCEX_EXPECTED_SLURM_CLUSTER" ]]; then
+        echo "Slurm target mismatch: expected=$INFERENCEX_EXPECTED_SLURM_CLUSTER actual=$ACTUAL_SLURM_CLUSTER" >&2
+        exit 1
+    fi
+    if ! sinfo --noheader --partition="$SLURM_PARTITION" --format='%P' | grep -q .; then
+        echo "Slurm partition is unavailable: cluster=$ACTUAL_SLURM_CLUSTER partition=$SLURM_PARTITION" >&2
+        exit 1
+    fi
+fi
 
 # Host-side directory holding aiperf's content-addressed dataset mmap cache.
 # Bind-mounted into worker containers at /aiperf_mmap_cache via the
@@ -115,11 +137,31 @@ if [[ -n "${MODEL_PATH_OVERRIDE:-}" ]]; then
         jq -er '.nodes.results[].node' "$MODEL_STAGE_RECEIPT"
     )
     test "${#MODEL_STAGE_NODES[@]}" -gt 0
+    MODEL_PREFLIGHT_NODE_COUNT="${#MODEL_STAGE_NODES[@]}"
+    if [[ "${INFERENCEX_REQUIRE_PARTITION_RECEIPT_COVERAGE:-0}" == "1" ]]; then
+        mapfile -t ACTIVE_PARTITION_NODES < <(
+            sinfo --noheader --Node --partition="$SLURM_PARTITION" --format='%N|%T' |
+                awk -F'|' '$2 ~ /^(idle|allocated|mixed|completing)$/ {print $1}' |
+                sort -u
+        )
+        test "${#ACTIVE_PARTITION_NODES[@]}" -gt 0
+        missing_nodes=$(
+            comm -23 \
+                <(printf '%s\n' "${ACTIVE_PARTITION_NODES[@]}" | sort -u) \
+                <(printf '%s\n' "${MODEL_STAGE_NODES[@]}" | sort -u)
+        )
+        if [[ -n "$missing_nodes" ]]; then
+            echo "Active partition workers absent from model-stage receipt:" >&2
+            echo "$missing_nodes" >&2
+            exit 1
+        fi
+        MODEL_PREFLIGHT_NODE_COUNT="${#ACTIVE_PARTITION_NODES[@]}"
+    fi
     srun \
         --partition="$SLURM_PARTITION" \
         --account="$SLURM_ACCOUNT" \
-        --nodes="${#MODEL_STAGE_NODES[@]}" \
-        --ntasks="${#MODEL_STAGE_NODES[@]}" \
+        --nodes="$MODEL_PREFLIGHT_NODE_COUNT" \
+        --ntasks="$MODEL_PREFLIGHT_NODE_COUNT" \
         --ntasks-per-node=1 \
         --gpus-per-node=1 \
         --exclusive \
@@ -395,10 +437,11 @@ sed -i "s/^name:.*/name: \"${RUNNER_NAME}\"/" "$CONFIG_PATH"
 # Cluster profiles may add scheduler/runtime inputs to the resolved recipe.
 # This runs after the reviewed recipe is overlaid into the pinned srt-slurm
 # checkout, and the generated config and Slurm script remain native artifacts.
-if [[ -n "${SRT_SLURM_CPUS_PER_TASK:-}" || -n "${SRT_SLURM_ETCD_LEASE_TTL:-}" || -n "${SRT_SLURM_HEALTH_MAX_ATTEMPTS:-}" ]]; then
-    export CONFIG_PATH SRT_SLURM_CPUS_PER_TASK SRT_SLURM_ETCD_LEASE_TTL SRT_SLURM_HEALTH_MAX_ATTEMPTS
+if [[ -n "${SRT_SLURM_CPUS_PER_TASK:-}" || -n "${SRT_SLURM_ETCD_LEASE_TTL:-}" || -n "${SRT_SLURM_HEALTH_MAX_ATTEMPTS:-}" || -n "${SRT_SLURM_RUNTIME_ENV_JSON:-}" ]]; then
+    export CONFIG_PATH SRT_SLURM_CPUS_PER_TASK SRT_SLURM_ETCD_LEASE_TTL SRT_SLURM_HEALTH_MAX_ATTEMPTS SRT_SLURM_RUNTIME_ENV_JSON
     python - <<'PY'
 import os
+import json
 from pathlib import Path
 
 import yaml
@@ -434,6 +477,21 @@ if ttl:
     backend = document.setdefault("backend", {})
     for key in ("prefill_environment", "decode_environment"):
         backend.setdefault(key, {})["ETCD_LEASE_TTL"] = ttl
+
+runtime_env_json = os.environ.get("SRT_SLURM_RUNTIME_ENV_JSON")
+if runtime_env_json:
+    runtime_env = json.loads(runtime_env_json)
+    if not isinstance(runtime_env, dict) or not all(
+        isinstance(key, str) and isinstance(value, str)
+        for key, value in runtime_env.items()
+    ):
+        raise RuntimeError("SRT_SLURM_RUNTIME_ENV_JSON must contain string pairs")
+    frontend = document.setdefault("frontend", {}).setdefault("env", {})
+    backend = document.setdefault("backend", {})
+    for key, value in runtime_env.items():
+        frontend[key] = value
+        for environment in ("prefill_environment", "decode_environment"):
+            backend.setdefault(environment, {})[key] = value
 
 if os.environ.get("INFERENCEX_READINESS_ONLY") == "1":
     benchmark = document.setdefault("benchmark", {})

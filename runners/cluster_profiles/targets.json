@@ -1,0 +1,32 @@
+{
+  "lepton-gb300": {
+    "account": "nvidia",
+    "cluster_profile": "lepton-gb300",
+    "expected_nodes_minimum": 16,
+    "local_path": "/raid/scratch/benchops-oleizerov/models/DeepSeek-V4-Pro-b5968e9190ef",
+    "manifest_digest": "sha256:e5c7488ed33c3ea7e9c047395718b7e0326514e8c4dc9c6d66b0dfd038774662",
+    "model_repository": "deepseek-ai/DeepSeek-V4-Pro",
+    "model_revision": "b5968e9190ef611bbf34a7229255be88a0e937c1",
+    "model_stage_receipt": "model-stages/receipts/deepseek-v4-pro-lepton-gb300-b5968e9190ef.json",
+    "partition": "batch",
+    "runner_label": "gb300l-nv",
+    "shared_path": "/scratch/fsw/users/oleizerov/.benchops/models/DeepSeek-V4-Pro-b5968e9190ef",
+    "slurm_cluster": "nkx-slinky-dev-02",
+    "staging_cluster_id": "nkx-slinky-lepton-gb300-dev-02"
+  },
+  "nkx-gb300": {
+    "account": "nvidia",
+    "cluster_profile": "nkx-gb300",
+    "expected_nodes_exact": 16,
+    "local_path": "/scratch/models/DeepSeek-V4-Pro-b5968e9190ef",
+    "manifest_digest": "sha256:5c7c518159b3c7d0780d947846669693b16fe79f114b2010dd29769647eaa40d",
+    "model_repository": "deepseek-ai/DeepSeek-V4-Pro",
+    "model_revision": "b5968e9190ef611bbf34a7229255be88a0e937c1",
+    "model_stage_receipt": "model-stages/receipts/deepseek-v4-pro-gb300-b5968e9190ef.json",
+    "partition": "gpu",
+    "runner_label": "gb300-nv",
+    "shared_path": "/scratch/fsw/users/oleizerov/models/DeepSeek-V4-Pro-b5968e9190ef",
+    "slurm_cluster": "nkx-slinky-gb300-dev-01",
+    "staging_cluster_id": "nkx-slinky-gb300-dev-01"
+  }
+}

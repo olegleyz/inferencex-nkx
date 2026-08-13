@@ -1,0 +1,34 @@
+apiVersion: benchops.nvidia.com/v1alpha1
+kind: ModelStage
+
+metadata:
+  name: deepseek-v4-pro-lepton-gb300
+
+cluster:
+  id: nkx-slinky-lepton-gb300-dev-02
+
+model:
+  source:
+    type: huggingface
+    repository: deepseek-ai/DeepSeek-V4-Pro
+    revision: b5968e9190ef611bbf34a7229255be88a0e937c1
+  shared:
+    root: /scratch/fsw/users/oleizerov/.benchops/models
+  local:
+    root: /raid/scratch/benchops-oleizerov/models
+
+# ALL is resolved from schedulable GPU workers by BenchOps commit c1b99a1. The
+# reserved worker ip-100-64-207-81 was therefore excluded from audit job 1040.
+# Benchmark preflight rejects a future active worker not covered by the receipt.
+targets:
+  gpuNodes: ALL
+
+# Use one aggregate task per schedulable worker. This avoids unsupported pinned
+# single-node allocations under Lepton topology/block.
+transfer:
+  concurrency: 4
+  allTargetsAllocation: true
+
+verification:
+  requireAllTargets: true
+  minimumFreeSpace: 1Ti

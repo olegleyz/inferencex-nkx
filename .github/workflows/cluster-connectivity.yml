@@ -1,0 +1,60 @@
+name: Cluster Target Connectivity
+run-name: cluster connectivity - ${{ inputs.target-cluster }}
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+    inputs:
+      target-cluster:
+        description: "Isolated benchmark target"
+        required: true
+        type: choice
+        options:
+          - nkx-gb300
+          - lepton-gb300
+
+jobs:
+  verify:
+    runs-on: ${{ inputs.target-cluster == 'lepton-gb300' && 'gb300l-nv' || 'gb300-nv' }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify target routing and Slurm identity
+        env:
+          TARGET_CLUSTER: ${{ inputs.target-cluster }}
+        run: |
+          set -euo pipefail
+          resolved=$(python3 runners/resolve_cluster_target.py --target "$TARGET_CLUSTER")
+          expected_cluster=$(jq -r --arg target "$TARGET_CLUSTER" \
+            '.[$target].slurm_cluster' runners/cluster_profiles/targets.json)
+          expected_partition=$(jq -r --arg target "$TARGET_CLUSTER" \
+            '.[$target].partition' runners/cluster_profiles/targets.json)
+          expected_runner=$(jq -r '."runner-label"' <<<"$resolved")
+          actual_cluster=$(
+            scontrol show config | awk -F= '/^ClusterName[[:space:]]*=/ {
+              value=$2; gsub(/^[[:space:]]+|[[:space:]]+$/, "", value); print value
+            }'
+          )
+          test "$actual_cluster" = "$expected_cluster"
+          sinfo --noheader --partition="$expected_partition" --format='%P' | grep -q .
+          {
+            echo "target=$TARGET_CLUSTER"
+            echo "runner_name=${{ runner.name }}"
+            echo "runner_label=$expected_runner"
+            echo "slurm_cluster=$actual_cluster"
+            echo "partition=$expected_partition"
+            echo "source_commit=$(git rev-parse HEAD)"
+          } | tee cluster-connectivity.txt
+
+      - name: Upload connectivity evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: cluster_connectivity_${{ inputs.target-cluster }}_${{ github.run_attempt }}
+          path: cluster-connectivity.txt
+          if-no-files-found: error

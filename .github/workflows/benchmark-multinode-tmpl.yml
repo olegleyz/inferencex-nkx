@@ -193,6 +193,11 @@ on:
         required: false
         type: string
         default: ""
+      target-cluster:
+        description: "Resolved isolated benchmark target"
+        required: false
+        type: string
+        default: ""
       cluster-profile:
         description: "Explicit launcher cluster profile"
         required: false
@@ -242,6 +247,7 @@ env:
   KV_P2P_TRANSFER: ${{ inputs.kv-p2p-transfer }}
   TOTAL_CPU_DRAM_GB: ${{ inputs.total-cpu-dram-gb }}
   INFERENCEX_CLUSTER_PROFILE: ${{ inputs.cluster-profile }}
+  INFERENCEX_TARGET_CLUSTER: ${{ inputs.target-cluster }}
   INFERENCEX_READINESS_ONLY: ${{ inputs.readiness-only && '1' || '0' }}
   PYTHONDONTWRITEBYTECODE: '1'
   PYTHONPYCACHEPREFIX: /tmp/inferencex-pycache
@@ -299,6 +305,50 @@ jobs:
       c${{ join(fromJson(inputs.conc-list), 'x') }}${{ inputs.readiness-only && ' | readiness' || (inputs.eval-only && ' | eval-only' || (inputs.run-eval && ' | eval' || '')) }}
 
     steps:
+      - name: Verify runner and Slurm target identity
+        if: ${{ inputs.target-cluster != '' }}
+        env:
+          TARGET_CLUSTER: ${{ inputs.target-cluster }}
+          TARGET_RUNNER: ${{ inputs.runner }}
+          TARGET_PROFILE: ${{ inputs.cluster-profile }}
+        run: |
+          set -euo pipefail
+          case "$TARGET_CLUSTER" in
+            nkx-gb300)
+              expected_runner=gb300-nv
+              expected_profile=nkx-gb300
+              expected_cluster=nkx-slinky-gb300-dev-01
+              expected_partition=gpu
+              ;;
+            lepton-gb300)
+              expected_runner=gb300l-nv
+              expected_profile=lepton-gb300
+              expected_cluster=nkx-slinky-dev-02
+              expected_partition=batch
+              ;;
+            *)
+              echo "Unsupported target cluster: $TARGET_CLUSTER" >&2
+              exit 1
+              ;;
+          esac
+          test "$TARGET_RUNNER" = "$expected_runner"
+          test "$TARGET_PROFILE" = "$expected_profile"
+          if [ -z "${{ inputs.model-stage-result-file }}" ]; then
+            echo "Target-specific dispatch requires a committed model-stage receipt" >&2
+            exit 1
+          fi
+          actual_cluster=$(
+            scontrol show config | awk -F= '/^ClusterName[[:space:]]*=/ {
+              value=$2; gsub(/^[[:space:]]+|[[:space:]]+$/, "", value); print value
+            }'
+          )
+          if [ "$actual_cluster" != "$expected_cluster" ]; then
+            echo "Slurm target mismatch: expected=$expected_cluster actual=$actual_cluster" >&2
+            exit 1
+          fi
+          sinfo --noheader --partition="$expected_partition" --format='%P' | grep -q .
+          echo "Verified target=$TARGET_CLUSTER runner=${{ runner.name }} cluster=$actual_cluster partition=$expected_partition"
+
       - name: Slurm cleanup (pre-run)
         run: &slurm-cleanup |
           if command -v squeue >/dev/null 2>&1; then
@@ -322,39 +372,26 @@ jobs:
         if: ${{ inputs.model-stage-result-file != '' }}
         run: |
           set -euo pipefail
+          case "${{ inputs.model-stage-result-file }}" in
+            /*|*../*|../*)
+              echo "Model-stage receipt must be a tracked repository-relative path" >&2
+              exit 1
+              ;;
+          esac
+          git ls-files --error-unmatch "${{ inputs.model-stage-result-file }}" >/dev/null
           test -f "${{ inputs.model-stage-result-file }}"
           cp "${{ inputs.model-stage-result-file }}" model-stage-result.json
-          jq -e '
-            .state == "ready" and
-            .clusterId == "nkx-slinky-gb300-dev-01" and
-            .model.repository == "deepseek-ai/DeepSeek-V4-Pro" and
-            .model.revision == "b5968e9190ef611bbf34a7229255be88a0e937c1" and
-            .verification.mode == "full-sha256" and
-            .verification.requireAllTargets == true and
-            .nodes.required == 16 and
-            .nodes.verified == 16 and
-            ([.nodes.results[].node] | length) == 16 and
-            ([.nodes.results[].node] | unique | length) == 16 and
-            ([.nodes.results[].state] | all(. == "copied" or . == "reused")) and
-            .manifestDigest == "sha256:5c7c518159b3c7d0780d947846669693b16fe79f114b2010dd29769647eaa40d" and
-            .sharedPath == "/scratch/fsw/users/oleizerov/models/DeepSeek-V4-Pro-b5968e9190ef" and
-            .localPath == "/scratch/models/DeepSeek-V4-Pro-b5968e9190ef"
-          ' model-stage-result.json
-          shared_path="$(jq -er '.sharedPath' model-stage-result.json)"
-          model_path_override="$(jq -er '.localPath' model-stage-result.json)"
-          manifest_digest="$(jq -er '.manifestDigest' model-stage-result.json)"
-          cp "$shared_path/.benchops-model-manifest.json" \
-            model-stage-shared-manifest.json
-          test "$(jq -r '.manifestDigest' model-stage-shared-manifest.json)" = \
-            "$manifest_digest"
-          printf 'MODEL_PATH_OVERRIDE=%s\n' "$model_path_override" >> "$GITHUB_ENV"
-          printf 'MODEL_STAGE_MANIFEST_DIGEST=%s\n' "$manifest_digest" >> "$GITHUB_ENV"
+          python3 runners/validate_model_stage_receipt.py \
+            --target "${{ inputs.target-cluster }}" \
+            --receipt model-stage-result.json \
+            --shared-manifest-output model-stage-shared-manifest.json \
+            --github-env "$GITHUB_ENV"
 
       - name: Upload model staging provenance
         if: ${{ always() && inputs.model-stage-result-file != '' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: model_stage_${{ inputs.exp-name }}_${{ github.run_attempt }}
+          name: model_stage_${{ inputs.target-cluster || 'default' }}_${{ inputs.exp-name }}_${{ github.run_attempt }}
           path: |
             ${{ inputs.model-stage-result-file }}
             model-stage-result.json
@@ -366,7 +403,7 @@ jobs:
           RUNNER_NAME: ${{ runner.name }}
           RUNNER_TYPE: ${{ inputs.runner }}
           # Hash uniquely on all prefill/decode parallelism fields, worker counts, serving mode, concurrency, and runner.
-          RESULT_FILENAME: ${{ env.EXP_NAME }}_${{ env.PRECISION }}_${{ env.FRAMEWORK }}_prefill-tp${{ env.PREFILL_TP }}-pp${{ env.PREFILL_PP_SIZE }}-dcp${{ env.PREFILL_DCP_SIZE }}-pcp${{ env.PREFILL_PCP_SIZE }}-ep${{ env.PREFILL_EP }}-dp${{ env.PREFILL_DP_ATTN }}-nw${{ env.PREFILL_NUM_WORKERS }}_decode-tp${{ env.DECODE_TP }}-pp${{ env.DECODE_PP_SIZE }}-dcp${{ env.DECODE_DCP_SIZE }}-pcp${{ env.DECODE_PCP_SIZE }}-ep${{ env.DECODE_EP }}-dp${{ env.DECODE_DP_ATTN }}-nw${{ env.DECODE_NUM_WORKERS }}_disagg-${{ env.DISAGG }}_spec-${{ env.SPEC_DECODING }}_conc${{ join(fromJson(inputs.conc-list), 'x') }}${{ inputs.readiness-only && '_readiness' || '' }}_${{ runner.name }}
+          RESULT_FILENAME: ${{ inputs.target-cluster || 'default' }}_${{ env.EXP_NAME }}_${{ env.PRECISION }}_${{ env.FRAMEWORK }}_prefill-tp${{ env.PREFILL_TP }}-pp${{ env.PREFILL_PP_SIZE }}-dcp${{ env.PREFILL_DCP_SIZE }}-pcp${{ env.PREFILL_PCP_SIZE }}-ep${{ env.PREFILL_EP }}-dp${{ env.PREFILL_DP_ATTN }}-nw${{ env.PREFILL_NUM_WORKERS }}_decode-tp${{ env.DECODE_TP }}-pp${{ env.DECODE_PP_SIZE }}-dcp${{ env.DECODE_DCP_SIZE }}-pcp${{ env.DECODE_PCP_SIZE }}-ep${{ env.DECODE_EP }}-dp${{ env.DECODE_DP_ATTN }}-nw${{ env.DECODE_NUM_WORKERS }}_disagg-${{ env.DISAGG }}_spec-${{ env.SPEC_DECODING }}_conc${{ join(fromJson(inputs.conc-list), 'x') }}${{ inputs.readiness-only && '_readiness' || '' }}_${{ runner.name }}
         run: |
           set -x
           # Export RESULT_FILENAME early so it's available for artifact uploads even if cancelled
@@ -374,7 +411,11 @@ jobs:
 
           export ${{ join(fromJson(inputs.prefill-additional-settings), ' ') }} ${{ join(fromJson(inputs.decode-additional-settings), ' ') }}
           export IS_MULTINODE=true
-          bash ./runners/launch_${RUNNER_NAME%%_*}.sh
+          launcher_name="${RUNNER_NAME%%_*}"
+          if [ -n "${INFERENCEX_TARGET_CLUSTER:-}" ]; then
+            launcher_name="gb300-nv"
+          fi
+          bash "./runners/launch_${launcher_name}.sh"
           if [ "${{ inputs.eval-only }}" = "true" ]; then
             echo "Eval-only mode: skipping benchmark result file check"
             # Verify eval produced results
@@ -459,7 +500,7 @@ jobs:
         if: ${{ always() && inputs.model-stage-result-file != '' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: model_stage_runtime_${{ inputs.exp-name }}_${{ github.run_attempt }}
+          name: model_stage_runtime_${{ inputs.target-cluster || 'default' }}_${{ inputs.exp-name }}_${{ github.run_attempt }}
           path: |
             srtslurm.yaml
             srt-slurm-runtime/**

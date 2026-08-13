@@ -1,5 +1,5 @@
 name: End-to-End Tests
-run-name: e2e Test - ${{ inputs.test-name || inputs.generate-cli-command || github.event.inputs.generate-cli-command }}
+run-name: e2e Test - ${{ inputs.target-cluster && format('{0} - {1}', inputs.target-cluster, inputs.test-name || inputs.generate-cli-command || github.event.inputs.generate-cli-command) || inputs.test-name || inputs.generate-cli-command || github.event.inputs.generate-cli-command }}
 
 permissions:
     contents: read
@@ -80,8 +80,16 @@ on:
                 required: false
                 type: string
                 default: ""
+            target-cluster:
+                description: "Isolated benchmark target"
+                required: true
+                type: choice
+                options:
+                    - nkx-gb300
+                    - lepton-gb300
+                default: nkx-gb300
             cluster-profile:
-                description: "Explicit launcher cluster profile (optional)"
+                description: "Legacy explicit profile; target-cluster is preferred"
                 required: false
                 type: string
                 default: ""
@@ -110,8 +118,13 @@ on:
                 required: false
                 type: string
                 default: ""
+            target-cluster:
+                description: "Isolated benchmark target"
+                required: false
+                type: string
+                default: ""
             cluster-profile:
-                description: "Explicit launcher cluster profile (optional)"
+                description: "Legacy explicit profile; target-cluster is preferred"
                 required: false
                 type: string
                 default: ""
@@ -187,6 +200,10 @@ jobs:
             agentic-config: ${{ steps.get-jobs.outputs.agentic-config }}
             agentic-eval-config: ${{ steps.get-jobs.outputs.agentic-eval-config }}
             multi-node-agentic-config: ${{ steps.get-jobs.outputs.multi-node-agentic-config }}
+            target-cluster: ${{ steps.resolve-target.outputs.target-cluster }}
+            target-runner: ${{ steps.resolve-target.outputs.runner-label }}
+            target-profile: ${{ steps.resolve-target.outputs.cluster-profile }}
+            target-model-stage-result-file: ${{ steps.resolve-target.outputs.model-stage-result-file }}
         steps:
             - name: Checkout code (ref)
               if: ${{ inputs.ref && inputs.ref != '' }}
@@ -210,6 +227,16 @@ jobs:
                 persist-credentials: false
 
             - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+            - id: resolve-target
+              name: Resolve isolated cluster target
+              env:
+                  TARGET_CLUSTER: ${{ inputs.target-cluster }}
+                  LEGACY_CLUSTER_PROFILE: ${{ inputs.cluster-profile }}
+              run: |
+                  python3 runners/resolve_cluster_target.py \
+                    --target "$TARGET_CLUSTER" \
+                    --legacy-profile "$LEGACY_CLUSTER_PROFILE" \
+                    --github-output "$GITHUB_OUTPUT"
             - id: get-jobs
               env:
                   PR_LABELS: ${{ inputs.pr-labels-json || toJson(github.event.pull_request.labels.*.name) }}
@@ -218,6 +245,7 @@ jobs:
                   TRIM_CONC: ${{ inputs.trim-conc }}
                   ALL_EVALS: ${{ inputs.all-evals }}
                   EVALS_ONLY: ${{ inputs.evals-only }}
+                  TARGET_CLUSTER: ${{ steps.resolve-target.outputs.target-cluster }}
               run: |
                   PRIORITY_ROOT="${GITHUB_WORKSPACE}"
                   if [ -d "${GITHUB_WORKSPACE}/.ci-priority" ]; then
@@ -255,6 +283,10 @@ jobs:
                     CONFIG_JSON=$(uv run --no-project --with pydantic --with pyyaml --python 3.12 \
                       "${GITHUB_WORKSPACE}/utils/matrix_logic/generate_sweep_configs.py" \
                       $GENERATE_COMMAND)
+                  fi
+                  if [ -n "$TARGET_CLUSTER" ]; then
+                    python3 runners/validate_cluster_target_matrix.py \
+                      --target "$TARGET_CLUSTER" <<<"$CONFIG_JSON"
                   fi
                   score_matrix() {
                     local family="$1"
@@ -295,7 +327,7 @@ jobs:
             isl: ${{ matrix.config.isl }}
             osl: ${{ matrix.config.osl }}
             max-model-len: ${{ matrix.config.max-model-len }}
-            runner: ${{ matrix.config.runner }}
+            runner: ${{ needs.get-jobs.outputs.target-runner || matrix.config.runner }}
             priority: ${{ matrix.config.priority }}
             queue-token: ${{ matrix.config['queue-token'] }}
             image: ${{ matrix.config.image }}
@@ -331,8 +363,9 @@ jobs:
             decode-additional-settings: ${{ toJson(matrix.config.decode.additional-settings) }}
             run-eval: false
             ref: ${{ inputs.ref }}
-            model-stage-result-file: ${{ inputs.model-stage-result-file }}
-            cluster-profile: ${{ inputs.cluster-profile }}
+            model-stage-result-file: ${{ inputs.model-stage-result-file || needs.get-jobs.outputs.target-model-stage-result-file }}
+            target-cluster: ${{ needs.get-jobs.outputs.target-cluster }}
+            cluster-profile: ${{ needs.get-jobs.outputs.target-profile }}
             readiness-only: ${{ inputs.readiness-only }}
 
     test-sweep-multi-node-evals:
@@ -349,7 +382,7 @@ jobs:
             isl: ${{ matrix.config.isl }}
             osl: ${{ matrix.config.osl }}
             max-model-len: ${{ matrix.config.max-model-len }}
-            runner: ${{ matrix.config.runner }}
+            runner: ${{ needs.get-jobs.outputs.target-runner || matrix.config.runner }}
             priority: ${{ matrix.config.priority }}
             queue-token: ${{ matrix.config['queue-token'] }}
             image: ${{ matrix.config.image }}
@@ -387,8 +420,9 @@ jobs:
             eval-only: true
             eval-conc: ${{ matrix.config['eval-all-concs'] && join(matrix.config.conc, ' ') || matrix.config['eval-conc'] }}
             ref: ${{ inputs.ref }}
-            model-stage-result-file: ${{ inputs.model-stage-result-file }}
-            cluster-profile: ${{ inputs.cluster-profile }}
+            model-stage-result-file: ${{ inputs.model-stage-result-file || needs.get-jobs.outputs.target-model-stage-result-file }}
+            target-cluster: ${{ needs.get-jobs.outputs.target-cluster }}
+            cluster-profile: ${{ needs.get-jobs.outputs.target-profile }}
             readiness-only: ${{ inputs.readiness-only }}
 
     test-sweep-agentic:
@@ -491,7 +525,7 @@ jobs:
             isl: '0'
             osl: '0'
             max-model-len: '0'
-            runner: ${{ matrix.config.runner }}
+            runner: ${{ needs.get-jobs.outputs.target-runner || matrix.config.runner }}
             priority: ${{ matrix.config.priority }}
             queue-token: ${{ matrix.config['queue-token'] }}
             image: ${{ matrix.config.image }}
@@ -531,8 +565,9 @@ jobs:
             run-eval: false
             scenario-type: agentic-coding
             ref: ${{ inputs.ref }}
-            model-stage-result-file: ${{ inputs.model-stage-result-file }}
-            cluster-profile: ${{ inputs.cluster-profile }}
+            model-stage-result-file: ${{ inputs.model-stage-result-file || needs.get-jobs.outputs.target-model-stage-result-file }}
+            target-cluster: ${{ needs.get-jobs.outputs.target-cluster }}
+            cluster-profile: ${{ needs.get-jobs.outputs.target-profile }}
             readiness-only: ${{ inputs.readiness-only }}
 
     test-sweep-single-node:
