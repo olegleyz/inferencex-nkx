@@ -1,5 +1,9 @@
 # NKX GB300 DeepSeek V4 reproduction
 
+The source-controlled customization inventory and failure/remediation history
+for this work are recorded in
+[`NKX_GB300_CUSTOMIZATIONS_AND_FAILURES.md`](NKX_GB300_CUSTOMIZATIONS_AND_FAILURES.md).
+
 This run reproduces the completed BenchOps Slurm job `2024` through the
 InferenceX workflow and native `srt-slurm` launcher. It targets only the
 NKX-managed cluster `nkx-slinky-gb300-dev-01` (`gb300`); it is not valid for
