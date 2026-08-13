@@ -54,15 +54,9 @@ elif [[ $MODEL_PREFIX == "dsr1" && $PRECISION == "fp8" ]]; then
     export MODEL_PATH=/scratch/models/DeepSeek-R1-0528
     export SRT_SLURM_MODEL_PREFIX="dsr1-fp8"
 elif [[ $MODEL_PREFIX == "dsv4" && $PRECISION == "fp4" ]]; then
-    # Use the node-local /scratch SSD for the 806 GB DSv4-Pro
-    # checkpoint. Faster than the Vast NFS path, but this dir only
-    # exists on compute nodes — the GHA runner pod's view does NOT
-    # have /scratch/models, so srtctl preflight (which stats the path
-    # from the runner pod) may fail with "Model alias resolved to
-    # /scratch/models/DeepSeek-V4-Pro, but that path is unavailable."
-    # If that happens, the next step is either to (a) patch srt-slurm
-    # to add a skip_model_preflight recipe field, or (b) stub a
-    # symlink on the runner pod that points at the NFS copy.
+    # The checked-in default remains the original alias. Reproduction runs
+    # replace it below with the receipt's revision-qualified node-local path
+    # only after read-only validation on all 16 GPU workers.
     export MODEL_PATH=/scratch/models/DeepSeek-V4-Pro
     export SRT_SLURM_MODEL_PREFIX="deepseek-v4-pro"
 elif [[ $MODEL_PREFIX == "glm5" && $PRECISION == "fp4" && $FRAMEWORK == "dynamo-trt" ]]; then
@@ -451,7 +445,7 @@ path.write_text(yaml.safe_dump(document, sort_keys=False))
 PY
 fi
 
-# --no-preflight skips srtctl's pre-submit model-path stat, which runs on
+# --no-preflight skips newer srtctl's pre-submit model-path stat, which runs on
 # the GHA runner host (im-gb300-login-02, an x86 login node). It's required
 # whenever model.path resolves to the node-local /scratch NVMe that the login
 # node can't see:
@@ -468,7 +462,16 @@ SRTCTL_APPLY_ARGS=(
     -f "$CONFIG_FILE"
     --tags "gb300,${MODEL_PREFIX},${PRECISION},${ISL}x${OSL},infmax-$(date +%Y%m%d)"
 )
-if [[ -n "${MODEL_PATH_OVERRIDE:-}" || "$IS_AGENTIC" == "1" || "$MODEL_PREFIX" == "glm5.1" || ( "$MODEL_PREFIX" == "qwen3.5" && "$PRECISION" == "fp8" ) ]]; then
+if [[ -n "${MODEL_PATH_OVERRIDE:-}" ]]; then
+    # The job-2024 srt-slurm revision predates --no-preflight and does not
+    # perform that login-node path check. Newer revisions may expose the flag.
+    # In both cases the all-node read-only verification above is authoritative.
+    if srtctl apply --help 2>&1 | grep -q -- '--no-preflight'; then
+        SRTCTL_APPLY_ARGS+=(--no-preflight)
+    else
+        echo "Pinned srtctl has no --no-preflight option; using completed all-node model verification"
+    fi
+elif [[ "$IS_AGENTIC" == "1" || "$MODEL_PREFIX" == "glm5.1" || ( "$MODEL_PREFIX" == "qwen3.5" && "$PRECISION" == "fp8" ) ]]; then
     SRTCTL_APPLY_ARGS+=(--no-preflight)
 fi
 if [[ -n "$SRTCTL_SETUP_SCRIPT" ]]; then

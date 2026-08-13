@@ -54,6 +54,13 @@ manifest digest, and then passes only its `localPath` as
 `MODEL_PATH_OVERRIDE`. The benchmark job never downloads, copies, repairs, or
 rewrites model data.
 
+The pinned job-2024 srt-slurm revision predates the newer
+`srtctl apply --no-preflight` option and does not perform that login-node model
+path check. The launcher therefore feature-detects the option. For this exact
+revision it relies on the immediately preceding 16-node read-only validation
+and invokes the original `srtctl apply` interface without the unsupported
+flag.
+
 NKX Slurm currently accepts an unpinned 16-node allocation but rejects some
 smaller explicitly pinned allocations under `topology/block`. Both BenchOps
 staging and the benchmark's immediate read-only preflight therefore request
