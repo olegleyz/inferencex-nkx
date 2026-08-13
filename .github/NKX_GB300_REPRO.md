@@ -150,3 +150,46 @@ transports, and a successful request, dispatch the full point with
 `readiness-only=false`. Preserve the workflow run URL, exact
 commit SHA, generated matrix, resolved recipe, `srtslurm.yaml`, generated
 Slurm script, effective environment, logs, and native result artifacts.
+
+## Accepted reproduction
+
+The source-controlled execution path above completed successfully at
+InferenceX commit `72b394f4773ab7b3c416cc483119349a7f9be5b2`:
+
+| Evidence | Identifier |
+| --- | --- |
+| Readiness workflow | [GitHub Actions run 31659981532](https://github.com/olegleyz/inferencex-nkx/actions/runs/31659981532) |
+| Readiness Slurm job | `2407` (`COMPLETED`, 10/10 requests) |
+| Full workflow | [GitHub Actions run 31661199748](https://github.com/olegleyz/inferencex-nkx/actions/runs/31661199748) |
+| Full Slurm job | `2411` (`COMPLETED`, 40,960/40,960 requests) |
+| Placement | the same nine nodes recorded by job `2024` |
+
+The full run achieved 44,031.09 output tokens/s, 47.7867 requests/s, and
+396,386.30 total tokens/s in 857.142 seconds. Against BenchOps job `2024`,
+the output-token throughput differs by -1.58%, duration by +1.60%, mean TTFT
+by -0.14%, and mean TPOT by +2.03%. Both runs processed the identical
+302,018,346 input tokens and 37,740,883 output tokens.
+
+The workflow's native artifacts preserve the model-stage receipt, aggregate
+benchmark JSON, raw per-request result, complete frontend/prefill/decode logs,
+effective recipe, cluster configuration, generated Slurm script, launcher
+environment, and source revisions. Key artifact SHA-256 values are:
+
+| Artifact | SHA-256 |
+| --- | --- |
+| Effective recipe | `6e473e3a6fa4a4365c8c55536bb48f80df55e8b2ca074cad44845f89b4e79d31` |
+| Generated Slurm script | `6f0e32aa2e4d9b22048ae8a37db0eef7536f957cd0b785802cb5940a7f45cfd6` |
+| Launcher environment | `dc736208198de91a226bf84e5f96c8a85b0c9a2cef800116e13af30efda98d66` |
+| srt-slurm cluster configuration | `19797848c69701691e4669347a3dd775489f3b957144ae5c0846ef4d57966b89` |
+| Aggregate benchmark result | `c316aec51e2172b9857e1671277cf31ed60c10e61e140d1a606eaaf4279d4b97` |
+| Model-stage receipt | `ec750cc6fe832e19a73f043e9111d8c7f9b787cda1722fda477023466bf7a7bb` |
+| Complete server-log archive | `9c708610b2b96e78a29998de652c76145f519370b585bcbc0ed6869ab8d78355` |
+
+The only effective-recipe differences from job `2024` are the run name, the
+revision-qualified node-local model path, and removal of the two BenchOps
+bookkeeping variables `BENCHOPS_CPUS_PER_TASK` and
+`BENCHOPS_PRESERVE_KV_BOTH`. Their behavior remains explicit in the generated
+Slurm `cpus-per-task: 140` directive and the recipe's prefill/decode
+`kv_role: kv_both` settings. All other differences are the concrete NKX
+cluster inputs documented above; no benchmark-time model copy, package
+upgrade, interactive node modification, or TensorRT-LLM path was used.
