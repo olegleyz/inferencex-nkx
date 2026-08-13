@@ -250,14 +250,18 @@ An earlier dispatch, run `31665133763`, passed a mistyped expanded ref and was
 cancelled before any benchmark Slurm submission. It is not benchmark evidence.
 Run `31665151409` used the exact pushed commit above.
 
-| Configuration | GitHub job | Slurm job | Completed requests | Output tokens/s | BenchOps mean | Difference |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| `1p6d-dep4-tp4` | `94338053611` | `2415` | 1,920 | 6,903.19 | 6,911.09 | -0.11% |
-| `1p9d-tep4-tp4` | `94338053655` | `2435` | 180 | 1,368.78 | 1,284.42 | +6.57% |
-| `4p1d-dep4-dep8` | `94338053621` | `2419` | 40,960 | 30,517.74 | 30,428.89 | +0.29% |
-| `5p1d-dep4-dep8` | `94338053653` | `2423` | 40,960 | 37,677.32 | 37,536.85 | +0.37% |
-| `6p1d-dep4-dep8` | `94338053648` | `2431` | 40,960 | 44,547.54 | 44,419.36 | +0.29% |
-| `7p2d-dep4-dep16` | `94338053631` | `2427` | 30,720 | 50,513.81 | 50,132.01 | +0.76% |
+| Configuration | GitHub job | Slurm job | Nodes | Slurm elapsed | Completed requests | Output tokens/s | BenchOps mean | Difference |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `1p6d-dep4-tp4` | `94338053611` | `2415` | 8 | 00:21:37 | 1,920 | 6,903.19 | 6,911.09 | -0.11% |
+| `1p9d-tep4-tp4` | `94338053655` | `2435` | 10 | 00:16:18 | 180 | 1,368.78 | 1,284.42 | +6.57% |
+| `4p1d-dep4-dep8` | `94338053621` | `2419` | 7 | 01:07:18 | 40,960 | 30,517.74 | 30,428.89 | +0.29% |
+| `5p1d-dep4-dep8` | `94338053653` | `2423` | 8 | 01:02:46 | 40,960 | 37,677.32 | 37,536.85 | +0.37% |
+| `6p1d-dep4-dep8` | `94338053648` | `2431` | 9 | 00:59:10 | 40,960 | 44,547.54 | 44,419.36 | +0.29% |
+| `7p2d-dep4-dep16` | `94338053631` | `2427` | 16 | 00:46:44 | 30,720 | 50,513.81 | 50,132.01 | +0.76% |
+
+A post-run `sacct` audit on the NKX Slurm controller confirmed all six jobs
+as `COMPLETED` with exit code `0:0` and the allocation sizes shown above.
+`squeue` was empty after the sweep; no benchmark allocation was left running.
 
 The five higher-throughput points reproduced their three-run BenchOps means
 within 0.76%. The low-concurrency `1p9d` point is 6.57% above its BenchOps
