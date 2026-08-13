@@ -193,3 +193,45 @@ Slurm `cpus-per-task: 140` directive and the recipe's prefill/decode
 `kv_role: kv_both` settings. All other differences are the concrete NKX
 cluster inputs documented above; no benchmark-time model copy, package
 upgrade, interactive node modification, or TensorRT-LLM path was used.
+
+## Broader DeepSeek matrix
+
+BenchOps submission
+`nkx-slinky-gb300-dev-01-inferencex-20260810-205415037647-2f850127`
+ran three repeats of each of the six reviewed configurations below. The first
+InferenceX matrix reproduction runs one instance of each point. Repeats are a
+separate follow-up after all six execution paths have passed readiness and one
+full sweep.
+
+| Configuration | Concurrency | Requests | Serving GPUs | Allocation nodes | BenchOps jobs | Mean output tokens/s |
+| --- | ---: | ---: | ---: | ---: | --- | ---: |
+| `1p6d-dep4-tp4` | 192 | 1,920 | 28 | 8 | `2131`, `2134`, `2137` | 6,911.09 |
+| `1p9d-tep4-tp4` | 18 | 180 | 40 | 10 | `2122`, `2125`, `2128` | 1,284.42 |
+| `4p1d-dep4-dep8` | 4,096 | 40,960 | 24 | 7 | `2140`, `2143`, `2146` | 30,428.89 |
+| `5p1d-dep4-dep8` | 4,096 | 40,960 | 28 | 8 | `2149`, `2152`, `2155` | 37,536.85 |
+| `6p1d-dep4-dep8` | 4,096 | 40,960 | 32 | 9 | `2158`, `2161`, `2164` | 44,419.36 |
+| `7p2d-dep4-dep16` | 3,072 | 30,720 | 60 | 16 | `2167`, `2170`, `2173` | 50,132.01 |
+
+InferenceX already has a native exact-key selector for this set. It avoids a
+copied NKX master configuration and resolves directly from the original
+`configs/nvidia-master.yaml` entry and its six checked-in recipes:
+
+```bash
+uv run --with 'pydantic>=2' --with pyyaml \
+  python utils/matrix_logic/generate_sweep_configs.py test-config \
+  --config-files configs/nvidia-master.yaml \
+  --config-keys dsv4-fp4-gb300-dynamo-vllm \
+  --seq-lens 8k1k \
+  --no-evals
+```
+
+The GitHub Actions dispatch passes that command verbatim, the committed model
+receipt, and `cluster-profile=nkx-gb300`. It retains InferenceX's normal matrix
+fan-out and native Slurm scheduling behavior; there is no NKX-only matrix
+serializer or separate submission loop.
+
+The accepted readiness run `31659981532` and full run `31661199748` already
+validated the shared image, model receipt, setup composition, transport path,
+and native artifact collection. Dispatch the broader matrix with the normal
+workflow defaults: `readiness-only=false`, `fail-fast=false`, and the native
+matrix fan-out. Slurm remains authoritative for each recipe's allocation.
