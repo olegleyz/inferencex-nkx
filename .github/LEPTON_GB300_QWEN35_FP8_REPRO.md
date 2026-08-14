@@ -128,3 +128,21 @@ test-config --config-files configs/nvidia-master.yaml --runner-config configs/ru
 
 Run IDs, Slurm IDs, artifact links, validation results, and comparisons are
 added here as execution completes.
+
+## Native readiness execution
+
+| GitHub run | Commit | Slurm jobs | Outcome and action |
+| --- | --- | --- | --- |
+| [`31783350155`](https://github.com/olegleyz/inferencex-nkx/actions/runs/31783350155) | `230cfcefa` | `1083`, `1084`, `1086` | Model verification and image checks passed. The two-node sweep then inherited the x86_64 login-runner virtualenv and Arm64 `uv` failed on its Python with `Exec format error`. Commit `501c21dda` preserved the host `srtctl` entrypoint by absolute path and removed its virtualenv before Slurm submission. |
+| [`31783724727`](https://github.com/olegleyz/inferencex-nkx/actions/runs/31783724727) | `501c21dda` | `1087`–`1089` | The virtualenv was initially deactivated before the existing host-side recipe overlay, so its `python` command was unavailable. No serving sweep was submitted. Commit `b4072cc86` moved deactivation to the final boundary immediately before `srtctl apply`. |
+| [`31783961397`](https://github.com/olegleyz/inferencex-nkx/actions/runs/31783961397) | `b4072cc86` | `1090`–`1093` | Success. All 15 active workers passed model preflight, both image checks passed, and the native 2-node/8-GPU readiness sweep registered one prefill and one decode worker and completed one 8192/1024 request. |
+
+Readiness result `c1` recorded mean TTFT `0.2749 s`, mean TPOT `0.00573 s`,
+and mean end-to-end latency `5.2330 s`. This one-request result proves the
+launch path; it is not a performance comparison point.
+
+The successful run uploaded six native artifact groups: the benchmark result,
+aggregated result, server logs, model-stage provenance, runtime provenance,
+and run statistics. The runtime provenance includes `effective-recipe.yaml`,
+`config.yaml`, `sbatch_script.sh`, `launcher-environment.txt`,
+`inferencex-commit.txt`, `srt-slurm-commit.txt`, and `srtslurm.yaml`.
