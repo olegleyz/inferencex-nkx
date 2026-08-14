@@ -8,6 +8,7 @@ export SLURM_PARTITION="batch"
 export SLURM_ACCOUNT="nvidia"
 export INFERENCEX_EXPECTED_SLURM_CLUSTER="nkx-slinky-dev-02"
 export INFERENCEX_REQUIRE_PARTITION_RECEIPT_COVERAGE="1"
+export INFERENCEX_REJECT_WORKER_STARTUP_FAILURES="1"
 
 export AIPERF_MMAP_CACHE_HOST_PATH="/scratch/fsw/users/oleizerov/.benchops/datasets"
 export HF_HUB_CACHE_HOST_PATH="/scratch/fsw/users/oleizerov/.benchops/cache/hf-hub"

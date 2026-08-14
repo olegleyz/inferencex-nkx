@@ -629,6 +629,14 @@ wait $POLL_PID
 set -x
 
 echo "Job $JOB_ID completed!"
+
+# A failed data-parallel worker can leave enough surviving Dynamo endpoints to
+# satisfy srt-slurm's aggregate health count. Reject that degraded topology
+# before collecting a result when the cluster profile enables this guard.
+if [[ "${INFERENCEX_REJECT_WORKER_STARTUP_FAILURES:-0}" == "1" ]]; then
+    python3 "${GITHUB_WORKSPACE}/runners/validate_srt_worker_logs.py" "$LOGS_DIR"
+fi
+
 echo "Collecting results..."
 
 if [ -d "$LOGS_DIR" ]; then

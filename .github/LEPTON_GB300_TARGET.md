@@ -86,8 +86,17 @@ following before model preflight or benchmark submission:
 6. the receipt uses full SHA-256 verification and covers every currently
    active worker in the target partition;
 7. one read-only validation task succeeds on every receipt node.
+8. every intended srt-slurm worker log is free of startup-fatal signatures;
+   a surviving subset cannot publish a benchmark result as the requested
+   topology.
 
 Any mismatch exits before `srtctl apply` or `sbatch`.
+
+The worker-log postcondition runs after Slurm completion and before result
+collection. It was added after Lepton Slurm job `1063` lost one prefill worker
+to GPU XID 94 (`ROBUST_CHANNEL_CONTAINED_ERROR`) while Dynamo's aggregate
+endpoint count still allowed the benchmark to start. Slurm automatically
+drained the affected node; benchmark tooling never undrains or repairs nodes.
 
 ## Connectivity check
 
