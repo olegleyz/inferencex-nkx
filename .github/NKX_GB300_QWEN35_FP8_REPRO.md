@@ -28,11 +28,16 @@ revision above and this reproduction branch before cluster adaptation.
 
 ## Native matrix
 
-| Recipe | Topology | Concurrencies | Nodes / GPUs |
+| Recipe | Topology | Concurrencies | Allocated nodes / serving GPUs |
 | --- | --- | --- | --- |
 | `1p1d-tp4-tp4.yaml` | 1 prefill TP4 + 1 decode TP4 | 1, 2, 4, 8, 16, 32, 64, 128 | 2 / 8 |
 | `4p1d-dep4-dep16.yaml` | 4 prefill DEP4 + 1 decode DEP16 | 1024 | 8 / 32 |
-| `8p1d-dep4-dep16.yaml` | 8 prefill DEP4 + 1 decode DEP16 | 2048, 4096 | 12 / 48 |
+| `8p1d-dep4-dep16.yaml` | 8 prefill DEP4 + 1 decode DEP16 | 2048, 4096 | 13 / 48 |
+
+The 8P recipe requests a thirteenth, non-serving node because its original
+`infra.etcd_nats_dedicated_node: true` setting places etcd and NATS on a
+dedicated control-plane node. The serving topology remains 12 nodes and 48
+GPUs. This is original recipe behavior, not an NKX override.
 
 The normal InferenceX generator marks these entries for evaluation as well as
 throughput. The full workflow therefore retains its native throughput and
@@ -93,6 +98,47 @@ Set the same target and receipt, with `readiness-only=false`. Do not use
 | Initial readiness | GitHub Actions `31769246166`, Slurm `2444` | Serving succeeded, including one 8K/1K request, but post-processing failed because the one-request result had `std_tpot_ms=0` and `process_result.py` inverted every TPOT statistic. Native logs and the raw SA-Bench result were preserved. |
 | Result-processing fix | commit `9ca0c63f0dfcc1fdb29f32c665c258913fd61291` | Zero-valued TPOT statistics remain recorded but are not inverted into undefined interactivity values. All 32 result-processing tests passed, and the exact captured readiness JSON replayed successfully. |
 | Green readiness | GitHub Actions `31770432333`, job `94675083957`, Slurm `2448` | Success at the exact fix commit. Receipt validation, original 1P TP4 + 1D TP4 recipe, model initialization, worker registration, one 8K/1K request, result processing, aggregation, success-rate calculation, and native artifact upload all passed. Artifacts: result `9208215437`, server logs `9208215749`, resolved srt-slurm configuration `9208216074`, and aggregated result `9208220165`. |
+| Native full matrix | GitHub Actions `31771377672`, commit `b125545bd875b66cd0296c692e6e374317da0f16` | Dispatched with the normal `test-config` generator command above. It generated the original three throughput jobs and three GSM8K eval-only jobs; no concurrency, topology, duration, or eval suppression override was applied. |
+| 4P throughput | job `94677907619`, Slurm `2456` | Success. Native result artifact `9208986487`, server logs `9208987687`, resolved runtime/model-stage artifact `9208987976`. |
+| 8P throughput | job `94677907698`, Slurm `2464` | Success. Native result artifact `9210299316`, server logs `9210301909`, resolved runtime/model-stage artifact `9210302229`. |
+| 1P throughput | job `94677907670`, Slurm `2468` | Success. Native result artifact `9211088910`; all eight formal concurrency measurements completed with no failed requests. |
+| 4P eval | job `94677907624`, Slurm `2452` | Success. GSM8K strict-match `0.9666`, flexible-extract `0.9598`; eval artifact `9208526923`. |
+| 1P eval | job `94677907666`, Slurm `2460` | Success. GSM8K strict-match `0.9689158453`, flexible-extract `0.9620924943`; eval artifact `9209448986`. |
+| 8P eval | job `94677907752`, Slurm `2472` | Success. All 1,319 GSM8K requests completed; strict-match `0.9682`, flexible-extract `0.9606`; eval artifact `9211426308`. |
+| Initial eval collection | job `94704452829` | Failed before artifact download because upstream `collect-evals.yml` supplied the absent `REPO_PAT` secret as checkout's required token. No cluster or benchmark process was involved. The source fix uses the workflow-scoped `github.token`, matching `collect-results.yml`, and supports artifact-only collection from this existing run ID. |
 
-Full-run GitHub Actions IDs, benchmark Slurm job IDs, conclusions, artifact
-links, and performance comparisons are added here after execution.
+### Throughput comparison
+
+The comparison baseline is the arithmetic mean of completed BenchOps records
+with the same immutable model revision, Dynamo-SGLang framework, recipe,
+topology, scenario, and concurrency. The records are jobs `1421` through
+`1554` as grouped below; each point has four reference runs except c128, which
+also includes the earlier matching job `1414`.
+
+| Topology | Concurrency | InferenceX output tok/s | BenchOps mean output tok/s | Delta |
+| --- | ---: | ---: | ---: | ---: |
+| 1P1D TP4/TP4 | 1 | 181.02 | 174.48 | +3.75% |
+| 1P1D TP4/TP4 | 2 | 352.73 | 308.56 | +14.32% |
+| 1P1D TP4/TP4 | 4 | 611.29 | 537.11 | +13.81% |
+| 1P1D TP4/TP4 | 8 | 1,024.54 | 961.94 | +6.51% |
+| 1P1D TP4/TP4 | 16 | 1,672.65 | 1,578.88 | +5.94% |
+| 1P1D TP4/TP4 | 32 | 2,572.16 | 2,584.41 | -0.47% |
+| 1P1D TP4/TP4 | 64 | 4,042.34 | 3,595.29 | +12.43% |
+| 1P1D TP4/TP4 | 128 | 6,188.66 | 6,127.82 | +0.99% |
+| 4P DEP4 + 1D DEP16 | 1024 | 35,384.92 | 34,528.43 | +2.48% |
+| 8P DEP4 + 1D DEP16 | 2048 | 62,756.59 | 63,705.50 | -1.49% |
+| 8P DEP4 + 1D DEP16 | 4096 | 66,753.36 | 66,773.53 | -0.03% |
+
+The larger relative deltas occur at low-throughput 1P points and c64. The
+contract identities remain matched. One explicit execution-shape difference
+is that the normal InferenceX action measures all eight 1P concurrencies in a
+single serving lifetime, whereas the prior BenchOps evidence submitted each
+matrix point as a separate Slurm job. This is retained because reproducing the
+native InferenceX action is the objective; it is not hidden as an adapter.
+
+During 4P and 8P decode graph capture, NVSHMEM's optional IBGDA transport
+reported that the configured `rocep*` interface name was not an `mlx5` device
+and did not initialize that transport. The workers continued through their
+configured stack, registered successfully, completed every request, and
+produced throughput matching the BenchOps envelope. No recipe or live fabric
+setting was changed in response to the warning.
