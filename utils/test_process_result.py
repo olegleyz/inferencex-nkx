@@ -402,6 +402,25 @@ class TestCalculations:
         assert output_data["intvty_p50"] == pytest.approx(50.0)
         assert output_data["intvty_p99"] == pytest.approx(20.0)
 
+    def test_zero_tpot_stat_does_not_fail_processing(self, tmp_path, single_node_env_vars):
+        """A zero-variance TPOT statistic must not be inverted."""
+        benchmark_result = {
+            "model_id": "test-model",
+            "max_concurrency": 1,
+            "total_token_throughput": 1000.0,
+            "output_throughput": 800.0,
+            "mean_tpot_ms": 5.0,
+            "std_tpot_ms": 0.0,
+        }
+
+        result = run_script(tmp_path, single_node_env_vars, benchmark_result)
+        assert result.returncode == 0, f"Script failed: {result.stderr}"
+
+        output_data = json.loads(result.stdout)
+        assert output_data["mean_intvty"] == pytest.approx(200.0)
+        assert output_data["std_tpot"] == 0.0
+        assert "std_intvty" not in output_data
+
     def test_throughput_per_gpu_single_node(self, tmp_path, single_node_env_vars):
         """PP and PCP expand the GPU denominator while DCP remains metadata."""
         benchmark_result = {
