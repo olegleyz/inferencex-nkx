@@ -678,6 +678,52 @@ jobs:
         uses: ./.github/workflows/collect-evals.yml
         secrets: inherit
 
+    publish-inferencex-metadata:
+        name: publish InferenceX metadata
+        needs: [get-jobs, collect-results]
+        if: ${{ always() && needs.get-jobs.result == 'success' && needs.collect-results.result == 'success' }}
+        runs-on: ubuntu-latest
+        steps:
+            - name: Build InferenceX run manifest
+              env:
+                  TARGET_CLUSTER: ${{ needs.get-jobs.outputs.target-cluster }}
+              run: |
+                  python3 - <<'PY'
+                  import json
+                  import os
+
+                  target = os.environ["TARGET_CLUSTER"]
+                  environments = {
+                      "nkx-gb300": "son",
+                      "lepton-gb300": "sol",
+                  }
+                  if target not in environments:
+                      raise SystemExit(f"unsupported InferenceX publishing target: {target}")
+
+                  manifest = {
+                      "schema_version": 1,
+                      "environment": environments[target],
+                      "target_cluster": target,
+                      "repository": "${{ github.repository }}",
+                      "workflow": "${{ github.workflow }}",
+                      "run_id": ${{ github.run_id }},
+                      "run_attempt": ${{ github.run_attempt }},
+                      "head_sha": "${{ github.sha }}",
+                      "head_branch": "${{ github.ref_name }}",
+                  }
+                  with open("inferencex-run.json", "w", encoding="utf-8") as stream:
+                      json.dump(manifest, stream, indent=2)
+                      stream.write("\n")
+                  PY
+
+            - name: Upload InferenceX run manifest
+              uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+              with:
+                  name: inferencex-run
+                  path: inferencex-run.json
+                  if-no-files-found: error
+                  retention-days: 90
+
     calc-success-rate:
         needs: [collect-results, collect-evals]
         if: ${{ always() }}
