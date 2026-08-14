@@ -10,6 +10,7 @@
     "model_stage_receipt": "model-stages/receipts/deepseek-v4-pro-lepton-gb300-b5968e9190ef.json",
     "models": {
       "Qwen/Qwen3.5-397B-A17B-FP8": {
+        "expected_nodes_minimum": 12,
         "local_path": "/raid/scratch/benchops-oleizerov/models/Qwen3.5-397B-A17B-FP8-ea5b4f81096f",
         "manifest_digest": "sha256:3bc4f54f36992c01270313ae4a6b75cadfec4d58f6874282acbd6ada24ab7502",
         "model_repository": "Qwen/Qwen3.5-397B-A17B-FP8",

@@ -36,6 +36,7 @@ class ResolveClusterTargetTests(unittest.TestCase):
             "qwen3.5-397b-a17b-fp8-lepton-gb300-ea5b4f81096f.json",
         )
         self.assertTrue(qwen["local_path"].startswith("/raid/scratch/"))
+        self.assertEqual(qwen["expected_nodes_minimum"], 12)
 
     def test_mismatched_profile_fails(self) -> None:
         with self.assertRaisesRegex(RuntimeError, "target/profile mismatch"):
