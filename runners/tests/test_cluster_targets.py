@@ -356,10 +356,20 @@ class TargetMatrixTests(unittest.TestCase):
             1,
         )
 
-    def test_minimax_m3_readiness_is_only_reviewed_tp4_probe(self) -> None:
+    def test_minimax_m3_readiness_accepts_reviewed_probe_topologies(self) -> None:
         row = self._minimax_m3_row(
             "1p1d-dep2-tp4-eagle3-c1-8k1k.yaml"
         )
+        self.assertEqual(
+            validate_cluster_target_matrix.validate(
+                "nkx-gb300", [row], readiness_only=True
+            ),
+            1,
+        )
+        row = self._minimax_m3_row(
+            "2p1d-dep2-dep8-eagle3-c512-8k1k.yaml"
+        )
+        row["conc"] = [512]
         self.assertEqual(
             validate_cluster_target_matrix.validate(
                 "nkx-gb300", [row], readiness_only=True

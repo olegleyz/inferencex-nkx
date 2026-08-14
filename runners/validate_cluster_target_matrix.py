@@ -186,15 +186,19 @@ def validate(target: str, matrix: Any, *, readiness_only: bool = False) -> int:
     if allowed_targets is not None and target not in allowed_targets:
         raise RuntimeError(f"reviewed contract is not enabled for target {target}")
     recipes = contract["recipes"]
+    reviewed_concurrencies = contract.get("concurrencies", {})
     if readiness_only:
         readiness_recipes = {
-            "Qwen/Qwen3.5-397B-A17B-FP8": "1p1d-tp4-tp4.yaml",
+            "Qwen/Qwen3.5-397B-A17B-FP8": {"1p1d-tp4-tp4.yaml"},
         }
         if model == "MiniMaxAI/MiniMax-M3-MXFP8":
             readiness_recipes[model] = (
-                "1p1d-dep2-tep8-8k1k.yaml"
+                {"1p1d-dep2-tep8-8k1k.yaml"}
                 if is_standard_minimax
-                else "1p1d-dep2-tp4-eagle3-c1-8k1k.yaml"
+                else {
+                    "1p1d-dep2-tp4-eagle3-c1-8k1k.yaml",
+                    "2p1d-dep2-dep8-eagle3-c512-8k1k.yaml",
+                }
             )
         if model not in readiness_recipes or len(matrix) != 1:
             raise RuntimeError("readiness target must be one reviewed probe")
@@ -204,7 +208,7 @@ def validate(target: str, matrix: Any, *, readiness_only: bool = False) -> int:
         contract = {
             **contract,
             "expected": expected,
-            "recipes": {readiness_recipes[model]},
+            "recipes": readiness_recipes[model],
         }
         recipes = contract["recipes"]
     if len(matrix) > len(recipes):
@@ -235,7 +239,7 @@ def validate(target: str, matrix: Any, *, readiness_only: bool = False) -> int:
                     f"unreviewed concurrency set for {name}: {row.get('conc')!r}"
                 )
         if readiness_only:
-            allowed = [128] if is_standard_minimax else [1]
+            allowed = reviewed_concurrencies.get(name, [1])
             if row.get("conc") != allowed:
                 raise RuntimeError(
                     f"readiness target must use input concurrency {allowed!r}"
