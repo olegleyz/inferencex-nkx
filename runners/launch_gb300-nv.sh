@@ -356,6 +356,7 @@ if ! command -v srtctl &> /dev/null; then
     echo "Error: Failed to install srtctl"
     exit 1
 fi
+SRTCTL_BIN="$(command -v srtctl)"
 
 echo "Configs available at: $SRT_REPO_DIR/"
 
@@ -415,6 +416,13 @@ cat srtslurm.yaml
 
 echo "Running make setup..."
 make setup ARCH=aarch64
+
+# srtctl itself runs on the x86_64 login runner, but its submitted sweep runs
+# on aarch64 GPU workers. Keep the host entrypoint by absolute path while
+# removing the host virtualenv from the inherited Slurm environment; otherwise
+# uv on the compute node finds the x86_64 Python first and fails with ENOEXEC.
+deactivate
+hash -r
 
 # Export eval-related env vars for srt-slurm post-benchmark eval
 export INFMAX_WORKSPACE="$GITHUB_WORKSPACE"
@@ -534,7 +542,7 @@ if [[ -n "${MODEL_PATH_OVERRIDE:-}" ]]; then
     # The job-2024 srt-slurm revision predates --no-preflight and does not
     # perform that login-node path check. Newer revisions may expose the flag.
     # In both cases the all-node read-only verification above is authoritative.
-    if srtctl apply --help 2>&1 | grep -q -- '--no-preflight'; then
+    if "$SRTCTL_BIN" apply --help 2>&1 | grep -q -- '--no-preflight'; then
         SRTCTL_APPLY_ARGS+=(--no-preflight)
     else
         echo "Pinned srtctl has no --no-preflight option; using completed all-node model verification"
@@ -546,7 +554,7 @@ if [[ -n "$SRTCTL_SETUP_SCRIPT" ]]; then
     SRTCTL_APPLY_ARGS+=(--setup-script "$SRTCTL_SETUP_SCRIPT")
 fi
 
-SRTCTL_OUTPUT=$(srtctl apply "${SRTCTL_APPLY_ARGS[@]}" 2>&1)
+SRTCTL_OUTPUT=$("$SRTCTL_BIN" apply "${SRTCTL_APPLY_ARGS[@]}" 2>&1)
 echo "$SRTCTL_OUTPUT"
 
 JOB_ID=$(echo "$SRTCTL_OUTPUT" | grep -oP '✅ Job \K[0-9]+' || echo "$SRTCTL_OUTPUT" | grep -oP 'Job \K[0-9]+')
