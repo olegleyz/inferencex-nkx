@@ -136,3 +136,42 @@ optional receipt input is empty; an explicit override still has to pass the
 same target-aware identity checks. The target changes only runner, scheduler/storage inputs, and
 the Lepton RoCE mapping; it retains the original recipes and native matrix,
 Slurm launcher, result processing, and artifact collection.
+
+## Completed DeepSeek V4 native matrix
+
+The six-point DeepSeek V4 FP4 Dynamo-vLLM matrix completed on August 13-14,
+2026. All points used the immutable model receipt above, image
+`vllm/vllm-openai:dsv4-megamoe-mxfp4-arm64-cu130-4ba0a72`, native InferenceX
+SA-Bench traffic, the checked-in srt-slurm recipes, and Lepton target
+`gb300l-nv`. Results are split across the original matrix run and two
+point-specific retries; every row records its exact source commit.
+
+| Topology | Recipe | Conc. | Requests | Output tok/s | GitHub run/job | Slurm | Commit |
+| --- | --- | ---: | ---: | ---: | --- | ---: | --- |
+| 1P9D | `disagg-gb300-1p9d-tep4-tp4.yaml` | 18 | 180 | 1,289.99 | `31755963110` / `94631697897` | `1055` | `d92139a012969fa8f9fccf9994d88d89242b00e4` |
+| 1P6D | `disagg-gb300-1p6d-dep4-tp4.yaml` | 192 | 1,920 | 6,665.76 | `31770235139` / `94674490288` | `1075` | `33688cffadfb9eff319d26f5cb348c5eb1d1d457` |
+| 4P1D | `disagg-gb300-4p1d-dep4-dep8-24-c4096.yaml` | 4,096 | 40,960 | 30,291.90 | `31770236419` / `94674485533` | `1071` | `33688cffadfb9eff319d26f5cb348c5eb1d1d457` |
+| 5P1D | `disagg-gb300-5p1d-dep4-dep8-28-c4096.yaml` | 4,096 | 40,960 | 37,835.49 | `31755963110` / `94631697888` | `1059` | `d92139a012969fa8f9fccf9994d88d89242b00e4` |
+| 6P1D | `disagg-gb300-6p1d-dep4-dep8-32-c4096.yaml` | 4,096 | 40,960 | 44,759.77 | `31755963110` / `94631697946` | `1067` | `d92139a012969fa8f9fccf9994d88d89242b00e4` |
+| 7P2D | `disagg-gb300-7p2d-dep4-dep16.yaml` | 3,072 | 30,720 | 50,858.75 | `31755963110` / `94631697896` | `1051` | `d92139a012969fa8f9fccf9994d88d89242b00e4` |
+
+GitHub run URLs use
+`https://github.com/olegleyz/inferencex-nkx/actions/runs/<RUN_ID>`. Each valid
+job uploaded its native processed result, nested server-log archive, resolved
+srt-slurm runtime configuration, and model-stage provenance. The four valid
+jobs from the original matrix were independently scanned after extracting the
+nested `multinode_server_logs.tar.gz`; the two retries passed both the online
+post-Slurm guard and a second scan of their downloaded artifacts.
+
+### Rejected attempts and corrective actions
+
+| Attempt | Failure | Corrective action |
+| --- | --- | --- |
+| Original 4P1D, Slurm `1063` | GPU XID 94 on `ip-100-64-172-86` killed one prefill worker, but aggregate Dynamo endpoint counting let the benchmark continue with a degraded topology. | Treat the result as invalid, leave the automatically drained node untouched, add the fail-closed worker-log validator, and retry only 4P1D as Slurm `1071` on healthy nodes. |
+| Original 1P6D job `94631697922` | The workflow definition came from `d92139a`, but its mutable branch checkout advanced to `bd2db8f`; the two revisions disagreed on the model-receipt validator arguments. No Slurm benchmark was submitted. | Pin `inputs.ref` to the full immutable commit and retry only 1P6D as Slurm `1075`. |
+| First retry dispatches `31770196840` and `31770198110` | A manually expanded short SHA was not a real commit. | Cancel both runs before allocation and redispatch with the value returned by `git rev-parse HEAD`. |
+
+The completed retries are GitHub runs
+[`31770236419`](https://github.com/olegleyz/inferencex-nkx/actions/runs/31770236419)
+and
+[`31770235139`](https://github.com/olegleyz/inferencex-nkx/actions/runs/31770235139).
