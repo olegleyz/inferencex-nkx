@@ -106,6 +106,7 @@ Set the same target and receipt, with `readiness-only=false`. Do not use
 | 1P eval | job `94677907666`, Slurm `2460` | Success. GSM8K strict-match `0.9689158453`, flexible-extract `0.9620924943`; eval artifact `9209448986`. |
 | 8P eval | job `94677907752`, Slurm `2472` | Success. All 1,319 GSM8K requests completed; strict-match `0.9682`, flexible-extract `0.9606`; eval artifact `9211426308`. |
 | Initial eval collection | job `94704452829` | Failed before artifact download because upstream `collect-evals.yml` supplied the absent `REPO_PAT` secret as checkout's required token. No cluster or benchmark process was involved. The source fix uses the workflow-scoped `github.token`, matching `collect-results.yml`, and supports artifact-only collection from this existing run ID. |
+| Recovered eval collection | GitHub Actions `31780529575`, job `94705111465`, commit `29dead78f910a68ac2e22c7b1f42cdf4ef4007d8` | Success without cluster access or benchmark resubmission. It downloaded the three eval artifacts from source run `31771377672`, summarized them, and uploaded the three-entry aggregate as artifact `9211512842`. |
 
 ### Throughput comparison
 
