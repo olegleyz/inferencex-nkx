@@ -18,6 +18,9 @@ model:
     root: /raid/scratch/benchops-oleizerov/models
 
 targets:
+  # Resolved dynamically from schedulable Slurm GPU workers by BenchOps
+  # b18c62d20799ddd7173415ea901afbbecb55f0c5. No node names or manual
+  # exclusions are part of this declaration.
   gpuNodes: ALL
 
 transfer:

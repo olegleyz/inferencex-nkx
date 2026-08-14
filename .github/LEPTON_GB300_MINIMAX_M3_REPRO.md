@@ -67,6 +67,14 @@ receipts. The workflow performs read-only receipt, manifest, file-size, and
 active-partition coverage checks before launching `srtctl`. Benchmark jobs do
 not download, copy, repair, or rewrite either model.
 
+Model staging uses BenchOps commit
+`b18c62d20799ddd7173415ea901afbbecb55f0c5`. Both declarations retain
+`targets.gpuNodes: ALL`; BenchOps resolves that value from Slurm's currently
+schedulable GPU workers and skips unavailable states such as drained and
+reserved. No node names or manual exclusion list are committed. The plan must
+be reviewed immediately before staging, and the resulting receipt freezes the
+exact workers that were required and verified for that execution.
+
 ## Dispatch sequence
 
 Do not dispatch until both model receipts are committed and every active
