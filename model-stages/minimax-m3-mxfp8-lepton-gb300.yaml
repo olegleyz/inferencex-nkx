@@ -1,0 +1,29 @@
+apiVersion: benchops.nvidia.com/v1alpha1
+kind: ModelStage
+
+metadata:
+  name: minimax-m3-mxfp8-lepton-gb300
+
+cluster:
+  id: nkx-slinky-lepton-gb300-dev-02
+
+model:
+  source:
+    type: huggingface
+    repository: MiniMaxAI/MiniMax-M3-MXFP8
+    revision: c5454eb03678d8710e54a4e0fc681b9f3b4a3dba
+  shared:
+    root: /scratch/fsw/users/oleizerov/models
+  local:
+    root: /raid/scratch/benchops-oleizerov/models
+
+targets:
+  gpuNodes: ALL
+
+transfer:
+  concurrency: 4
+  allTargetsAllocation: true
+
+verification:
+  requireAllTargets: true
+  minimumFreeSpace: 1Ti

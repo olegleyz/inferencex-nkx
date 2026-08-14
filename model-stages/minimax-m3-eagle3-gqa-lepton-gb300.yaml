@@ -1,0 +1,29 @@
+apiVersion: benchops.nvidia.com/v1alpha1
+kind: ModelStage
+
+metadata:
+  name: minimax-m3-eagle3-gqa-lepton-gb300
+
+cluster:
+  id: nkx-slinky-lepton-gb300-dev-02
+
+model:
+  source:
+    type: huggingface
+    repository: Inferact/MiniMax-M3-EAGLE3-GQA
+    revision: 96692486b5fd38ebf8fd2a5f6bb53427d30819a8
+  shared:
+    root: /scratch/fsw/users/oleizerov/models
+  local:
+    root: /raid/scratch/benchops-oleizerov/models
+
+targets:
+  gpuNodes: ALL
+
+transfer:
+  concurrency: 4
+  allTargetsAllocation: true
+
+verification:
+  requireAllTargets: true
+  minimumFreeSpace: 50Gi
