@@ -626,7 +626,10 @@ if os.environ.get("INFERENCEX_READINESS_ONLY") == "1":
     benchmark = document.setdefault("benchmark", {})
     benchmark["concurrencies"] = "1"
     benchmark["num_prompts_mult"] = 1
-    benchmark["num_warmup_mult"] = 0
+    # Pinned sa-bench performs its endpoint test from the warm-up request
+    # collection before running the measured workload. Keep one warm-up so
+    # the focused gate reaches its single formal request.
+    benchmark["num_warmup_mult"] = 1
 
 path.write_text(yaml.safe_dump(document, sort_keys=False))
 PY
