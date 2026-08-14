@@ -93,6 +93,19 @@ def main() -> None:
     parser.add_argument("--receipt", type=Path, required=True)
     parser.add_argument("--shared-manifest-output", type=Path, required=True)
     parser.add_argument("--github-env", type=Path)
+    parser.add_argument(
+        "--path-env",
+        choices=("MODEL_PATH_OVERRIDE", "SPECULATIVE_MODEL_PATH_OVERRIDE"),
+        default="MODEL_PATH_OVERRIDE",
+    )
+    parser.add_argument(
+        "--digest-env",
+        choices=(
+            "MODEL_STAGE_MANIFEST_DIGEST",
+            "SPECULATIVE_MODEL_STAGE_MANIFEST_DIGEST",
+        ),
+        default="MODEL_STAGE_MANIFEST_DIGEST",
+    )
     args = parser.parse_args()
     receipt = _read_object(args.receipt)
     shared_manifest_path = Path(receipt["sharedPath"]) / ".benchops-model-manifest.json"
@@ -103,8 +116,8 @@ def main() -> None:
     )
     if args.github_env:
         values = {
-            "MODEL_PATH_OVERRIDE": model_path,
-            "MODEL_STAGE_MANIFEST_DIGEST": str(receipt["manifestDigest"]),
+            args.path_env: model_path,
+            args.digest_env: str(receipt["manifestDigest"]),
         }
         with args.github_env.open("a", encoding="utf-8") as stream:
             for key, value in values.items():

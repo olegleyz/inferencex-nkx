@@ -103,7 +103,6 @@ backend:
       max-num-seqs: 1024
       max-num-batched-tokens: 16384
       max-cudagraph-capture-size: 2048
-      compilation-config: '{"cudagraph_mode":"FULL_DECODE_ONLY"}'
 
 benchmark:
   type: "sa-bench"

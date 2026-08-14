@@ -1,0 +1,186 @@
+{
+  "clusterId": "nkx-slinky-gb300-dev-01",
+  "localPath": "/scratch/models/MiniMax-M3-EAGLE3-GQA-96692486b5fd",
+  "manifestDigest": "sha256:80b9d422bf51734bf429fa93286387d9fd362ed0e417a77f10de7d71fd190ee8",
+  "model": {
+    "repository": "Inferact/MiniMax-M3-EAGLE3-GQA",
+    "revision": "96692486b5fd38ebf8fd2a5f6bb53427d30819a8",
+    "source": "huggingface"
+  },
+  "nodes": {
+    "copied": 0,
+    "failed": 0,
+    "required": 16,
+    "results": [
+      {
+        "availableBytes": 27249084747776,
+        "fileCount": 5,
+        "manifestDigest": "sha256:80b9d422bf51734bf429fa93286387d9fd362ed0e417a77f10de7d71fd190ee8",
+        "node": "ip-100-64-134-242",
+        "path": "/scratch/models/MiniMax-M3-EAGLE3-GQA-96692486b5fd",
+        "requiredBytes": 6149993396,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27248314179584,
+        "fileCount": 5,
+        "manifestDigest": "sha256:80b9d422bf51734bf429fa93286387d9fd362ed0e417a77f10de7d71fd190ee8",
+        "node": "ip-100-64-138-242",
+        "path": "/scratch/models/MiniMax-M3-EAGLE3-GQA-96692486b5fd",
+        "requiredBytes": 6149993396,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27249093406720,
+        "fileCount": 5,
+        "manifestDigest": "sha256:80b9d422bf51734bf429fa93286387d9fd362ed0e417a77f10de7d71fd190ee8",
+        "node": "ip-100-64-148-224",
+        "path": "/scratch/models/MiniMax-M3-EAGLE3-GQA-96692486b5fd",
+        "requiredBytes": 6149993396,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27249081143296,
+        "fileCount": 5,
+        "manifestDigest": "sha256:80b9d422bf51734bf429fa93286387d9fd362ed0e417a77f10de7d71fd190ee8",
+        "node": "ip-100-64-173-209",
+        "path": "/scratch/models/MiniMax-M3-EAGLE3-GQA-96692486b5fd",
+        "requiredBytes": 6149993396,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27249057894400,
+        "fileCount": 5,
+        "manifestDigest": "sha256:80b9d422bf51734bf429fa93286387d9fd362ed0e417a77f10de7d71fd190ee8",
+        "node": "ip-100-64-181-193",
+        "path": "/scratch/models/MiniMax-M3-EAGLE3-GQA-96692486b5fd",
+        "requiredBytes": 6149993396,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27249071931392,
+        "fileCount": 5,
+        "manifestDigest": "sha256:80b9d422bf51734bf429fa93286387d9fd362ed0e417a77f10de7d71fd190ee8",
+        "node": "ip-100-64-195-223",
+        "path": "/scratch/models/MiniMax-M3-EAGLE3-GQA-96692486b5fd",
+        "requiredBytes": 6149993396,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27249083006976,
+        "fileCount": 5,
+        "manifestDigest": "sha256:80b9d422bf51734bf429fa93286387d9fd362ed0e417a77f10de7d71fd190ee8",
+        "node": "ip-100-64-211-112",
+        "path": "/scratch/models/MiniMax-M3-EAGLE3-GQA-96692486b5fd",
+        "requiredBytes": 6149993396,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27248953634816,
+        "fileCount": 5,
+        "manifestDigest": "sha256:80b9d422bf51734bf429fa93286387d9fd362ed0e417a77f10de7d71fd190ee8",
+        "node": "ip-100-64-212-204",
+        "path": "/scratch/models/MiniMax-M3-EAGLE3-GQA-96692486b5fd",
+        "requiredBytes": 6149993396,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27249074556928,
+        "fileCount": 5,
+        "manifestDigest": "sha256:80b9d422bf51734bf429fa93286387d9fd362ed0e417a77f10de7d71fd190ee8",
+        "node": "ip-100-64-216-168",
+        "path": "/scratch/models/MiniMax-M3-EAGLE3-GQA-96692486b5fd",
+        "requiredBytes": 6149993396,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27249080782848,
+        "fileCount": 5,
+        "manifestDigest": "sha256:80b9d422bf51734bf429fa93286387d9fd362ed0e417a77f10de7d71fd190ee8",
+        "node": "ip-100-64-226-161",
+        "path": "/scratch/models/MiniMax-M3-EAGLE3-GQA-96692486b5fd",
+        "requiredBytes": 6149993396,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27249079640064,
+        "fileCount": 5,
+        "manifestDigest": "sha256:80b9d422bf51734bf429fa93286387d9fd362ed0e417a77f10de7d71fd190ee8",
+        "node": "ip-100-64-232-100",
+        "path": "/scratch/models/MiniMax-M3-EAGLE3-GQA-96692486b5fd",
+        "requiredBytes": 6149993396,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27248077729792,
+        "fileCount": 5,
+        "manifestDigest": "sha256:80b9d422bf51734bf429fa93286387d9fd362ed0e417a77f10de7d71fd190ee8",
+        "node": "ip-100-64-237-78",
+        "path": "/scratch/models/MiniMax-M3-EAGLE3-GQA-96692486b5fd",
+        "requiredBytes": 6149993396,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27249083871232,
+        "fileCount": 5,
+        "manifestDigest": "sha256:80b9d422bf51734bf429fa93286387d9fd362ed0e417a77f10de7d71fd190ee8",
+        "node": "ip-100-64-239-237",
+        "path": "/scratch/models/MiniMax-M3-EAGLE3-GQA-96692486b5fd",
+        "requiredBytes": 6149993396,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27249013714944,
+        "fileCount": 5,
+        "manifestDigest": "sha256:80b9d422bf51734bf429fa93286387d9fd362ed0e417a77f10de7d71fd190ee8",
+        "node": "ip-100-64-248-153",
+        "path": "/scratch/models/MiniMax-M3-EAGLE3-GQA-96692486b5fd",
+        "requiredBytes": 6149993396,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27248316141568,
+        "fileCount": 5,
+        "manifestDigest": "sha256:80b9d422bf51734bf429fa93286387d9fd362ed0e417a77f10de7d71fd190ee8",
+        "node": "ip-100-64-252-30",
+        "path": "/scratch/models/MiniMax-M3-EAGLE3-GQA-96692486b5fd",
+        "requiredBytes": 6149993396,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27248307871744,
+        "fileCount": 5,
+        "manifestDigest": "sha256:80b9d422bf51734bf429fa93286387d9fd362ed0e417a77f10de7d71fd190ee8",
+        "node": "ip-100-64-254-227",
+        "path": "/scratch/models/MiniMax-M3-EAGLE3-GQA-96692486b5fd",
+        "requiredBytes": 6149993396,
+        "state": "reused"
+      }
+    ],
+    "reused": 16,
+    "verified": 16
+  },
+  "recordPath": "/Users/oleizerov/Documents/code/ai-cluster-benchmarking/.benchops/model-stages/minimax-m3-eagle3-gqa-gb300/20260814T075039336334Z",
+  "requiredModelBytes": 6149993396,
+  "schemaVersion": 1,
+  "sharedCopy": {
+    "availableBytes": 1260160024576,
+    "fileCount": 5,
+    "manifestDigest": "sha256:80b9d422bf51734bf429fa93286387d9fd362ed0e417a77f10de7d71fd190ee8",
+    "node": "nkx-slinky-gb300-dev-01-login-01",
+    "path": "/scratch/fsw/users/oleizerov/models/MiniMax-M3-EAGLE3-GQA-96692486b5fd",
+    "requiredBytes": 6149993396,
+    "state": "valid"
+  },
+  "sharedPath": "/scratch/fsw/users/oleizerov/models/MiniMax-M3-EAGLE3-GQA-96692486b5fd",
+  "state": "ready",
+  "transfer": {
+    "concurrency": 4,
+    "estimatedBytes": 0,
+    "nodesRequired": []
+  },
+  "verification": {
+    "mode": "full-sha256",
+    "requireAllTargets": true
+  }
+}

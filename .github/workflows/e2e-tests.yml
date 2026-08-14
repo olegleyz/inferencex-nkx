@@ -80,6 +80,11 @@ on:
                 required: false
                 type: string
                 default: ""
+            speculative-model-stage-result-file:
+                description: "Committed ready speculative-model ModelStage receipt (optional)"
+                required: false
+                type: string
+                default: ""
             target-cluster:
                 description: "Isolated benchmark target"
                 required: true
@@ -115,6 +120,11 @@ on:
                 type: string
             model-stage-result-file:
                 description: "Committed ready BenchOps ModelStage receipt (optional)"
+                required: false
+                type: string
+                default: ""
+            speculative-model-stage-result-file:
+                description: "Committed ready speculative-model ModelStage receipt (optional)"
                 required: false
                 type: string
                 default: ""
@@ -369,6 +379,7 @@ jobs:
             run-eval: false
             ref: ${{ inputs.ref }}
             model-stage-result-file: ${{ inputs.model-stage-result-file || needs.get-jobs.outputs.target-model-stage-result-file }}
+            speculative-model-stage-result-file: ${{ inputs.speculative-model-stage-result-file }}
             target-cluster: ${{ needs.get-jobs.outputs.target-cluster }}
             cluster-profile: ${{ needs.get-jobs.outputs.target-profile }}
             readiness-only: ${{ inputs.readiness-only }}
@@ -426,6 +437,7 @@ jobs:
             eval-conc: ${{ matrix.config['eval-all-concs'] && join(matrix.config.conc, ' ') || matrix.config['eval-conc'] }}
             ref: ${{ inputs.ref }}
             model-stage-result-file: ${{ inputs.model-stage-result-file || needs.get-jobs.outputs.target-model-stage-result-file }}
+            speculative-model-stage-result-file: ${{ inputs.speculative-model-stage-result-file }}
             target-cluster: ${{ needs.get-jobs.outputs.target-cluster }}
             cluster-profile: ${{ needs.get-jobs.outputs.target-profile }}
             readiness-only: ${{ inputs.readiness-only }}
@@ -571,6 +583,7 @@ jobs:
             scenario-type: agentic-coding
             ref: ${{ inputs.ref }}
             model-stage-result-file: ${{ inputs.model-stage-result-file || needs.get-jobs.outputs.target-model-stage-result-file }}
+            speculative-model-stage-result-file: ${{ inputs.speculative-model-stage-result-file }}
             target-cluster: ${{ needs.get-jobs.outputs.target-cluster }}
             cluster-profile: ${{ needs.get-jobs.outputs.target-profile }}
             readiness-only: ${{ inputs.readiness-only }}

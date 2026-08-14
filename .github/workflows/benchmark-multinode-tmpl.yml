@@ -193,6 +193,11 @@ on:
         required: false
         type: string
         default: ""
+      speculative-model-stage-result-file:
+        description: "Committed ready speculative-model ModelStage receipt"
+        required: false
+        type: string
+        default: ""
       target-cluster:
         description: "Resolved isolated benchmark target"
         required: false
@@ -337,6 +342,15 @@ jobs:
             echo "Target-specific dispatch requires a committed model-stage receipt" >&2
             exit 1
           fi
+          if [ "$MODEL_PREFIX-$SPEC_DECODING" = "minimaxm3-mtp" ]; then
+            if [ -z "${{ inputs.speculative-model-stage-result-file }}" ]; then
+              echo "MiniMax M3 EAGLE3 requires a committed speculative-model staging receipt" >&2
+              exit 1
+            fi
+          elif [ -n "${{ inputs.speculative-model-stage-result-file }}" ]; then
+            echo "A speculative-model receipt is only supported by the reviewed MiniMax M3 MTP contract" >&2
+            exit 1
+          fi
           actual_cluster=$(
             scontrol show config | awk -F= '/^ClusterName[[:space:]]*=/ {
               value=$2; gsub(/^[[:space:]]+|[[:space:]]+$/, "", value); print value
@@ -397,6 +411,39 @@ jobs:
             ${{ inputs.model-stage-result-file }}
             model-stage-result.json
             model-stage-shared-manifest.json
+          if-no-files-found: warn
+
+      - name: Validate existing speculative-model staging receipt
+        if: ${{ inputs.speculative-model-stage-result-file != '' }}
+        run: |
+          set -euo pipefail
+          case "${{ inputs.speculative-model-stage-result-file }}" in
+            /*|*../*|../*)
+              echo "Speculative-model receipt must be a tracked repository-relative path" >&2
+              exit 1
+              ;;
+          esac
+          git ls-files --error-unmatch "${{ inputs.speculative-model-stage-result-file }}" >/dev/null
+          test -f "${{ inputs.speculative-model-stage-result-file }}"
+          cp "${{ inputs.speculative-model-stage-result-file }}" speculative-model-stage-result.json
+          python3 runners/validate_model_stage_receipt.py \
+            --target "${{ inputs.target-cluster }}" \
+            --model-repository "Inferact/MiniMax-M3-EAGLE3-GQA" \
+            --receipt speculative-model-stage-result.json \
+            --shared-manifest-output speculative-model-stage-shared-manifest.json \
+            --github-env "$GITHUB_ENV" \
+            --path-env SPECULATIVE_MODEL_PATH_OVERRIDE \
+            --digest-env SPECULATIVE_MODEL_STAGE_MANIFEST_DIGEST
+
+      - name: Upload speculative-model staging provenance
+        if: ${{ always() && inputs.speculative-model-stage-result-file != '' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: speculative_model_stage_${{ inputs.target-cluster || 'default' }}_${{ inputs.exp-name }}_${{ github.run_attempt }}
+          path: |
+            ${{ inputs.speculative-model-stage-result-file }}
+            speculative-model-stage-result.json
+            speculative-model-stage-shared-manifest.json
           if-no-files-found: warn
 
       - name: Launch multi-node job script

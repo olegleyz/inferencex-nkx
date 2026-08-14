@@ -127,47 +127,63 @@ fi
 # path. Preserve every existing model default when no override is supplied.
 export MODEL_PATH="${MODEL_PATH_OVERRIDE:-$MODEL_PATH}"
 
-# A ready receipt is immutable evidence that BenchOps staged the pinned model.
+# A ready receipt is immutable evidence that BenchOps staged a pinned model.
 # Immediately before launch, independently perform its read-only marker,
-# manifest, and file-size checks on every exact worker named in that receipt.
-if [[ -n "${MODEL_PATH_OVERRIDE:-}" ]]; then
-    MODEL_STAGE_RECEIPT="${GITHUB_WORKSPACE}/model-stage-result.json"
-    test -f "$MODEL_STAGE_RECEIPT"
-    mapfile -t MODEL_STAGE_NODES < <(
-        jq -er '.nodes.results[].node' "$MODEL_STAGE_RECEIPT"
-    )
-    test "${#MODEL_STAGE_NODES[@]}" -gt 0
-    MODEL_PREFLIGHT_NODE_COUNT="${#MODEL_STAGE_NODES[@]}"
+# manifest, and file-size checks on every exact worker named in each receipt.
+verify_model_stage_receipt_all_nodes() {
+    local label="$1" receipt="$2" preflight_node_count missing_nodes
+    local -a receipt_nodes active_partition_nodes
+    test -f "$receipt"
+    mapfile -t receipt_nodes < <(jq -er '.nodes.results[].node' "$receipt")
+    test "${#receipt_nodes[@]}" -gt 0
+    preflight_node_count="${#receipt_nodes[@]}"
     if [[ "${INFERENCEX_REQUIRE_PARTITION_RECEIPT_COVERAGE:-0}" == "1" ]]; then
-        mapfile -t ACTIVE_PARTITION_NODES < <(
+        mapfile -t active_partition_nodes < <(
             sinfo --noheader --Node --partition="$SLURM_PARTITION" --format='%N|%T' |
                 awk -F'|' '$2 ~ /^(idle|allocated|mixed|completing)$/ {print $1}' |
                 sort -u
         )
-        test "${#ACTIVE_PARTITION_NODES[@]}" -gt 0
+        test "${#active_partition_nodes[@]}" -gt 0
         missing_nodes=$(
             comm -23 \
-                <(printf '%s\n' "${ACTIVE_PARTITION_NODES[@]}" | sort -u) \
-                <(printf '%s\n' "${MODEL_STAGE_NODES[@]}" | sort -u)
+                <(printf '%s\n' "${active_partition_nodes[@]}" | sort -u) \
+                <(printf '%s\n' "${receipt_nodes[@]}" | sort -u)
         )
         if [[ -n "$missing_nodes" ]]; then
-            echo "Active partition workers absent from model-stage receipt:" >&2
+            echo "Active partition workers absent from $label staging receipt:" >&2
             echo "$missing_nodes" >&2
             exit 1
         fi
-        MODEL_PREFLIGHT_NODE_COUNT="${#ACTIVE_PARTITION_NODES[@]}"
+        preflight_node_count="${#active_partition_nodes[@]}"
     fi
     srun \
         --partition="$SLURM_PARTITION" \
         --account="$SLURM_ACCOUNT" \
-        --nodes="$MODEL_PREFLIGHT_NODE_COUNT" \
-        --ntasks="$MODEL_PREFLIGHT_NODE_COUNT" \
+        --nodes="$preflight_node_count" \
+        --ntasks="$preflight_node_count" \
         --ntasks-per-node=1 \
         --gpus-per-node=1 \
         --exclusive \
         --time=30 \
         python3 "${GITHUB_WORKSPACE}/runners/verify_model_stage.py" \
-            --receipt "$MODEL_STAGE_RECEIPT"
+            --receipt "$receipt"
+}
+
+if [[ -n "${MODEL_PATH_OVERRIDE:-}" ]]; then
+    verify_model_stage_receipt_all_nodes \
+        "base model" "${GITHUB_WORKSPACE}/model-stage-result.json"
+fi
+
+if [[ "$MODEL_PREFIX-${SPEC_DECODING:-}" == "minimaxm3-mtp" ]]; then
+    if [[ -z "${SPECULATIVE_MODEL_PATH_OVERRIDE:-}" ]]; then
+        echo "MiniMax M3 EAGLE3 requires a verified node-local draft model" >&2
+        exit 1
+    fi
+    verify_model_stage_receipt_all_nodes \
+        "speculative model" "${GITHUB_WORKSPACE}/speculative-model-stage-result.json"
+elif [[ -n "${SPECULATIVE_MODEL_PATH_OVERRIDE:-}" ]]; then
+    echo "Unexpected speculative-model path for $MODEL_PREFIX-${SPEC_DECODING:-none}" >&2
+    exit 1
 fi
 
 NGINX_IMAGE="nginx:1.27.4"
@@ -209,7 +225,44 @@ import_squash() {
     "
 }
 
-import_squash "$SQUASH_FILE" "$IMAGE" "${IMAGE_SQUASH_SHA256:-}"
+verify_image_import_manifest() {
+    if [[ -z "${IMAGE_IMPORT_MANIFEST_SHA256:-}" ]]; then
+        return
+    fi
+    : "${IMAGE_IMPORT_REGISTRY:?missing IMAGE_IMPORT_REGISTRY}"
+    : "${IMAGE_IMPORT_REPOSITORY:?missing IMAGE_IMPORT_REPOSITORY}"
+    : "${IMAGE_IMPORT_TAG:?missing IMAGE_IMPORT_TAG}"
+    expected_reference="${IMAGE_IMPORT_REGISTRY}#${IMAGE_IMPORT_REPOSITORY}:${IMAGE_IMPORT_TAG}"
+    if [[ "${IMAGE_IMPORT_REFERENCE:-}" != "$expected_reference" ]]; then
+        echo "Image import reference does not match its reviewed registry coordinates" >&2
+        exit 1
+    fi
+
+    # Do not expose the short-lived anonymous registry token through xtrace.
+    set +x
+    registry_token=$(curl -fsSL \
+        "https://${IMAGE_IMPORT_REGISTRY}/token/?service=${IMAGE_IMPORT_REGISTRY}&scope=repository:${IMAGE_IMPORT_REPOSITORY}:pull" |
+        jq -er '.token')
+    manifest_headers=$(curl -fsSI \
+        -H "Authorization: Bearer ${registry_token}" \
+        -H 'Accept: application/vnd.docker.distribution.manifest.v2+json' \
+        "https://${IMAGE_IMPORT_REGISTRY}/v2/${IMAGE_IMPORT_REPOSITORY}/manifests/${IMAGE_IMPORT_TAG}")
+    unset registry_token
+    actual_manifest_sha256=$(awk \
+        'tolower($1) == "docker-content-digest:" {gsub("\\r", "", $2); print $2}' \
+        <<<"$manifest_headers")
+    unset manifest_headers
+    set -x
+    if [[ "$actual_manifest_sha256" != "$IMAGE_IMPORT_MANIFEST_SHA256" ]]; then
+        echo "OCI manifest mismatch for ${IMAGE_IMPORT_REFERENCE}" >&2
+        echo "expected=${IMAGE_IMPORT_MANIFEST_SHA256} actual=${actual_manifest_sha256}" >&2
+        exit 1
+    fi
+    echo "Verified immutable OCI manifest ${actual_manifest_sha256} for ${IMAGE_IMPORT_REFERENCE}"
+}
+
+verify_image_import_manifest
+import_squash "$SQUASH_FILE" "${IMAGE_IMPORT_REFERENCE:-$IMAGE}" "${IMAGE_SQUASH_SHA256:-}"
 import_squash "$NGINX_SQUASH_FILE" "$NGINX_IMAGE" "${NGINX_SQUASH_SHA256:-}"
 
 export EVAL_ONLY="${EVAL_ONLY:-false}"
@@ -312,7 +365,7 @@ elif [[ $FRAMEWORK == "dynamo-vllm" && $MODEL_PREFIX == "minimaxm3" ]]; then
     git clone https://github.com/NVIDIA/srt-slurm.git "$SRT_REPO_DIR"
     cd "$SRT_REPO_DIR"
     if [[ "${SPEC_DECODING:-}" == "mtp" ]]; then
-        git checkout v1.0.38
+        git checkout "${SRT_SLURM_MINIMAX_M3_REF:-v1.0.38}"
     else
         git checkout sa-submission-q2-2026
     fi
@@ -438,8 +491,8 @@ sed -i "s/^name:.*/name: \"${RUNNER_NAME}\"/" "$CONFIG_PATH"
 # Cluster profiles may add scheduler/runtime inputs to the resolved recipe.
 # This runs after the reviewed recipe is overlaid into the pinned srt-slurm
 # checkout, and the generated config and Slurm script remain native artifacts.
-if [[ -n "${SRT_SLURM_CPUS_PER_TASK:-}" || -n "${SRT_SLURM_TIME_LIMIT:-}" || -n "${SRT_SLURM_ETCD_LEASE_TTL:-}" || -n "${SRT_SLURM_HEALTH_MAX_ATTEMPTS:-}" || -n "${SRT_SLURM_RUNTIME_ENV_JSON:-}" ]]; then
-    export CONFIG_PATH SRT_SLURM_CPUS_PER_TASK SRT_SLURM_TIME_LIMIT SRT_SLURM_ETCD_LEASE_TTL SRT_SLURM_HEALTH_MAX_ATTEMPTS SRT_SLURM_RUNTIME_ENV_JSON
+if [[ -n "${SRT_SLURM_CPUS_PER_TASK:-}" || -n "${SRT_SLURM_TIME_LIMIT:-}" || -n "${SRT_SLURM_ETCD_LEASE_TTL:-}" || -n "${SRT_SLURM_HEALTH_MAX_ATTEMPTS:-}" || -n "${SRT_SLURM_RUNTIME_ENV_JSON:-}" || -n "${SPECULATIVE_MODEL_PATH_OVERRIDE:-}" ]]; then
+    export CONFIG_PATH SRT_SLURM_CPUS_PER_TASK SRT_SLURM_TIME_LIMIT SRT_SLURM_ETCD_LEASE_TTL SRT_SLURM_HEALTH_MAX_ATTEMPTS SRT_SLURM_RUNTIME_ENV_JSON SPECULATIVE_MODEL_PATH_OVERRIDE
     python - <<'PY'
 import os
 import json
@@ -503,6 +556,42 @@ if runtime_env_json:
         frontend[key] = value
         for environment in ("prefill_environment", "decode_environment"):
             backend.setdefault(environment, {})[key] = value
+
+speculative_model_path = os.environ.get("SPECULATIVE_MODEL_PATH_OVERRIDE")
+if speculative_model_path:
+    vllm_config = document.setdefault("backend", {}).get("vllm_config")
+    if not isinstance(vllm_config, dict):
+        raise RuntimeError("speculative-model override requires backend.vllm_config")
+    for role in ("prefill", "decode"):
+        role_config = vllm_config.get(role)
+        if not isinstance(role_config, dict):
+            raise RuntimeError(f"speculative-model override requires {role} config")
+        raw = role_config.get("speculative-config")
+        if not isinstance(raw, str):
+            raise RuntimeError(f"speculative-model override requires {role} speculative-config")
+        speculative = json.loads(raw)
+        if speculative.get("method") != "eagle3" or speculative.get("model") != "Inferact/MiniMax-M3-EAGLE3-GQA":
+            raise RuntimeError(f"unexpected reviewed {role} speculative model")
+        speculative["model"] = speculative_model_path
+        role_config["speculative-config"] = json.dumps(
+            speculative, separators=(",", ":")
+        )
+    # srtctl mounts the primary model alias at /model. The EAGLE3 draft
+    # remains an absolute path in speculative-config, so expose that one
+    # independently verified directory read-only at the same container path.
+    base_model_path = os.environ.get("MODEL_PATH")
+    if not base_model_path or not base_model_path.startswith("/"):
+        raise RuntimeError("speculative-model override requires absolute MODEL_PATH")
+    base_mount = f"{base_model_path}:/model:ro"
+    draft_mount = f"{speculative_model_path}:{speculative_model_path}:ro"
+    extra_mount = document.setdefault("extra_mount", [])
+    if not isinstance(extra_mount, list) or any(
+        not isinstance(value, str) for value in extra_mount
+    ):
+        raise RuntimeError("reviewed recipe extra_mount must be a string list")
+    for mount in (base_mount, draft_mount):
+        if mount not in extra_mount:
+            extra_mount.append(mount)
 
 if os.environ.get("INFERENCEX_READINESS_ONLY") == "1":
     benchmark = document.setdefault("benchmark", {})
@@ -603,7 +692,7 @@ _snapshot_server_logs() {
         git -C "$GITHUB_WORKSPACE" rev-parse HEAD > \
             "$runtime_dir/inferencex-commit.txt" 2>/dev/null || true
         env | LC_ALL=C sort | grep -E \
-            '^(AIPERF_|CUDA_|DYNAMO_|ENROOT_|HF_HUB_|IMAGE=|IMAGE_SQUASH_|INFERENCEX_|MODEL=|MODEL_PATH|NCCL_|NIXL_|NVSHMEM_|SLURM_|SQUASH_|SRT_|TORCH_|UCX_|VLLM_)' \
+            '^(AIPERF_|CUDA_|DYNAMO_|ENROOT_|HF_HUB_|IMAGE=|IMAGE_IMPORT_|IMAGE_SQUASH_|INFERENCEX_|MODEL=|MODEL_PATH|NCCL_|NIXL_|NVSHMEM_|SLURM_|SPECULATIVE_MODEL_|SQUASH_|SRT_|TORCH_|UCX_|VLLM_)' \
             > "$runtime_dir/launcher-environment.txt" || true
     fi
 }

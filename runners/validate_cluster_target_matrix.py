@@ -13,6 +13,9 @@ from resolve_cluster_target import load_targets
 
 DEEPSEEK_IMAGE = "vllm/vllm-openai:dsv4-megamoe-mxfp4-arm64-cu130-4ba0a72"
 QWEN35_FP8_IMAGE = "lmsysorg/sglang:nightly-dev-cu13-20260709-074bb928"
+MINIMAX_M3_EAGLE3_IMAGE = (
+    "vllm/vllm-openai:nightly-5e35a6f4f9bbc217c599692157ca985c894373f7"
+)
 
 CONTRACTS = {
     "deepseek-ai/DeepSeek-V4-Pro": {
@@ -58,6 +61,34 @@ CONTRACTS = {
             "8p1d-dep4-dep16.yaml",
         },
     },
+    "MiniMaxAI/MiniMax-M3-MXFP8": {
+        "expected": {
+            "image": MINIMAX_M3_EAGLE3_IMAGE,
+            "model": "MiniMaxAI/MiniMax-M3-MXFP8",
+            "model-prefix": "minimaxm3",
+            "precision": "fp8",
+            "framework": "dynamo-vllm",
+            "runner": "gb300-nv",
+            "isl": 8192,
+            "osl": 1024,
+            "spec-decoding": "mtp",
+            "run-eval": False,
+        },
+        "recipe_prefix": "recipes/vllm/minimax-m3-gb300-fp8/8k1k/mtp/",
+        "recipes": {
+            "1p1d-dep2-dep8-eagle3-c64-8k1k.yaml",
+            "1p1d-dep2-tp4-eagle3-c1-8k1k.yaml",
+            "1p1d-dep2-tp4-eagle3-c8-8k1k.yaml",
+            "1p1d-dep2-tp8-eagle3-c1-8k1k.yaml",
+            "1p1d-dep2-tp8-eagle3-c4-8k1k.yaml",
+            "1p1d-dep2-tp8-eagle3-c8-8k1k.yaml",
+            "2p1d-dep2-dep8-eagle3-c512-8k1k.yaml",
+            "3p1d-dep2-dep8-eagle3-c256-8k1k.yaml",
+            "4p1d-dep2-dep8-eagle3-c1024-8k1k.yaml",
+            "4p1d-dep2-dep8-eagle3-c2048-8k1k.yaml",
+            "6p1d-dep2-dep8-eagle3-c2048-8k1k.yaml",
+        },
+    },
 }
 
 
@@ -87,12 +118,21 @@ def validate(target: str, matrix: Any, *, readiness_only: bool = False) -> int:
     contract = CONTRACTS[model]
     recipes = contract["recipes"]
     if readiness_only:
-        if model != "Qwen/Qwen3.5-397B-A17B-FP8" or len(matrix) != 1:
-            raise RuntimeError("readiness target must be the single Qwen3.5 probe")
+        readiness_recipes = {
+            "Qwen/Qwen3.5-397B-A17B-FP8": "1p1d-tp4-tp4.yaml",
+            "MiniMaxAI/MiniMax-M3-MXFP8": (
+                "1p1d-dep2-tp4-eagle3-c1-8k1k.yaml"
+            ),
+        }
+        if model not in readiness_recipes or len(matrix) != 1:
+            raise RuntimeError("readiness target must be one reviewed probe")
+        expected = dict(contract["expected"])
+        if model == "Qwen/Qwen3.5-397B-A17B-FP8":
+            expected["run-eval"] = False
         contract = {
             **contract,
-            "expected": {**contract["expected"], "run-eval": False},
-            "recipes": {"1p1d-tp4-tp4.yaml"},
+            "expected": expected,
+            "recipes": {readiness_recipes[model]},
         }
         recipes = contract["recipes"]
     if len(matrix) > len(recipes):

@@ -1,0 +1,186 @@
+{
+  "clusterId": "nkx-slinky-gb300-dev-01",
+  "localPath": "/scratch/models/MiniMax-M3-MXFP8-c5454eb03678",
+  "manifestDigest": "sha256:47c93af2b64f6ad8ff2b48eb02dbfc80183b8c223067d4599997c098ae42ddae",
+  "model": {
+    "repository": "MiniMaxAI/MiniMax-M3-MXFP8",
+    "revision": "c5454eb03678d8710e54a4e0fc681b9f3b4a3dba",
+    "source": "huggingface"
+  },
+  "nodes": {
+    "copied": 0,
+    "failed": 0,
+    "required": 16,
+    "results": [
+      {
+        "availableBytes": 26805301657600,
+        "fileCount": 52,
+        "manifestDigest": "sha256:47c93af2b64f6ad8ff2b48eb02dbfc80183b8c223067d4599997c098ae42ddae",
+        "node": "ip-100-64-134-242",
+        "path": "/scratch/models/MiniMax-M3-MXFP8-c5454eb03678",
+        "requiredBytes": 443776005285,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 26804531421184,
+        "fileCount": 52,
+        "manifestDigest": "sha256:47c93af2b64f6ad8ff2b48eb02dbfc80183b8c223067d4599997c098ae42ddae",
+        "node": "ip-100-64-138-242",
+        "path": "/scratch/models/MiniMax-M3-MXFP8-c5454eb03678",
+        "requiredBytes": 443776005285,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 26805310824448,
+        "fileCount": 52,
+        "manifestDigest": "sha256:47c93af2b64f6ad8ff2b48eb02dbfc80183b8c223067d4599997c098ae42ddae",
+        "node": "ip-100-64-148-224",
+        "path": "/scratch/models/MiniMax-M3-MXFP8-c5454eb03678",
+        "requiredBytes": 443776005285,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 26805298135040,
+        "fileCount": 52,
+        "manifestDigest": "sha256:47c93af2b64f6ad8ff2b48eb02dbfc80183b8c223067d4599997c098ae42ddae",
+        "node": "ip-100-64-173-209",
+        "path": "/scratch/models/MiniMax-M3-MXFP8-c5454eb03678",
+        "requiredBytes": 443776005285,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 26805274611712,
+        "fileCount": 52,
+        "manifestDigest": "sha256:47c93af2b64f6ad8ff2b48eb02dbfc80183b8c223067d4599997c098ae42ddae",
+        "node": "ip-100-64-181-193",
+        "path": "/scratch/models/MiniMax-M3-MXFP8-c5454eb03678",
+        "requiredBytes": 443776005285,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 26805290000384,
+        "fileCount": 52,
+        "manifestDigest": "sha256:47c93af2b64f6ad8ff2b48eb02dbfc80183b8c223067d4599997c098ae42ddae",
+        "node": "ip-100-64-195-223",
+        "path": "/scratch/models/MiniMax-M3-MXFP8-c5454eb03678",
+        "requiredBytes": 443776005285,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 26805299953664,
+        "fileCount": 52,
+        "manifestDigest": "sha256:47c93af2b64f6ad8ff2b48eb02dbfc80183b8c223067d4599997c098ae42ddae",
+        "node": "ip-100-64-211-112",
+        "path": "/scratch/models/MiniMax-M3-MXFP8-c5454eb03678",
+        "requiredBytes": 443776005285,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 26805164470272,
+        "fileCount": 52,
+        "manifestDigest": "sha256:47c93af2b64f6ad8ff2b48eb02dbfc80183b8c223067d4599997c098ae42ddae",
+        "node": "ip-100-64-212-204",
+        "path": "/scratch/models/MiniMax-M3-MXFP8-c5454eb03678",
+        "requiredBytes": 443776005285,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 26805291085824,
+        "fileCount": 52,
+        "manifestDigest": "sha256:47c93af2b64f6ad8ff2b48eb02dbfc80183b8c223067d4599997c098ae42ddae",
+        "node": "ip-100-64-216-168",
+        "path": "/scratch/models/MiniMax-M3-MXFP8-c5454eb03678",
+        "requiredBytes": 443776005285,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 26805297672192,
+        "fileCount": 52,
+        "manifestDigest": "sha256:47c93af2b64f6ad8ff2b48eb02dbfc80183b8c223067d4599997c098ae42ddae",
+        "node": "ip-100-64-226-161",
+        "path": "/scratch/models/MiniMax-M3-MXFP8-c5454eb03678",
+        "requiredBytes": 443776005285,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 26805296410624,
+        "fileCount": 52,
+        "manifestDigest": "sha256:47c93af2b64f6ad8ff2b48eb02dbfc80183b8c223067d4599997c098ae42ddae",
+        "node": "ip-100-64-232-100",
+        "path": "/scratch/models/MiniMax-M3-MXFP8-c5454eb03678",
+        "requiredBytes": 443776005285,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 26804295028736,
+        "fileCount": 52,
+        "manifestDigest": "sha256:47c93af2b64f6ad8ff2b48eb02dbfc80183b8c223067d4599997c098ae42ddae",
+        "node": "ip-100-64-237-78",
+        "path": "/scratch/models/MiniMax-M3-MXFP8-c5454eb03678",
+        "requiredBytes": 443776005285,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 26805300965376,
+        "fileCount": 52,
+        "manifestDigest": "sha256:47c93af2b64f6ad8ff2b48eb02dbfc80183b8c223067d4599997c098ae42ddae",
+        "node": "ip-100-64-239-237",
+        "path": "/scratch/models/MiniMax-M3-MXFP8-c5454eb03678",
+        "requiredBytes": 443776005285,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 26805230735360,
+        "fileCount": 52,
+        "manifestDigest": "sha256:47c93af2b64f6ad8ff2b48eb02dbfc80183b8c223067d4599997c098ae42ddae",
+        "node": "ip-100-64-248-153",
+        "path": "/scratch/models/MiniMax-M3-MXFP8-c5454eb03678",
+        "requiredBytes": 443776005285,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 26804532989952,
+        "fileCount": 52,
+        "manifestDigest": "sha256:47c93af2b64f6ad8ff2b48eb02dbfc80183b8c223067d4599997c098ae42ddae",
+        "node": "ip-100-64-252-30",
+        "path": "/scratch/models/MiniMax-M3-MXFP8-c5454eb03678",
+        "requiredBytes": 443776005285,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 26804525875200,
+        "fileCount": 52,
+        "manifestDigest": "sha256:47c93af2b64f6ad8ff2b48eb02dbfc80183b8c223067d4599997c098ae42ddae",
+        "node": "ip-100-64-254-227",
+        "path": "/scratch/models/MiniMax-M3-MXFP8-c5454eb03678",
+        "requiredBytes": 443776005285,
+        "state": "reused"
+      }
+    ],
+    "reused": 16,
+    "verified": 16
+  },
+  "recordPath": "/Users/oleizerov/Documents/code/ai-cluster-benchmarking/.benchops/model-stages/minimax-m3-mxfp8-gb300/20260814T105320089208Z",
+  "requiredModelBytes": 443776005285,
+  "schemaVersion": 1,
+  "sharedCopy": {
+    "availableBytes": 816228073472,
+    "fileCount": 52,
+    "manifestDigest": "sha256:47c93af2b64f6ad8ff2b48eb02dbfc80183b8c223067d4599997c098ae42ddae",
+    "node": "nkx-slinky-gb300-dev-01-login-01",
+    "path": "/scratch/fsw/users/oleizerov/models/MiniMax-M3-MXFP8-c5454eb03678",
+    "requiredBytes": 443776005285,
+    "state": "valid"
+  },
+  "sharedPath": "/scratch/fsw/users/oleizerov/models/MiniMax-M3-MXFP8-c5454eb03678",
+  "state": "ready",
+  "transfer": {
+    "concurrency": 4,
+    "estimatedBytes": 0,
+    "nodesRequired": []
+  },
+  "verification": {
+    "mode": "full-sha256",
+    "requireAllTargets": true
+  }
+}
