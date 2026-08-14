@@ -417,13 +417,6 @@ cat srtslurm.yaml
 echo "Running make setup..."
 make setup ARCH=aarch64
 
-# srtctl itself runs on the x86_64 login runner, but its submitted sweep runs
-# on aarch64 GPU workers. Keep the host entrypoint by absolute path while
-# removing the host virtualenv from the inherited Slurm environment; otherwise
-# uv on the compute node finds the x86_64 Python first and fails with ENOEXEC.
-deactivate
-hash -r
-
 # Export eval-related env vars for srt-slurm post-benchmark eval
 export INFMAX_WORKSPACE="$GITHUB_WORKSPACE"
 
@@ -534,6 +527,14 @@ fi
 # The engine still fails loudly at runtime if the path is genuinely missing on
 # the compute node. Other fixed-seq-len recipes resolve model.path to a
 # login-visible location, so keep the precheck enforced for them.
+# srtctl itself runs on the x86_64 login runner, but its submitted sweep runs
+# on aarch64 GPU workers. Keep the host entrypoint by absolute path while
+# removing the host virtualenv from the inherited Slurm environment; otherwise
+# uv on the compute node finds the x86_64 Python first and fails with ENOEXEC.
+# Do this only after host-side recipe generation, which uses the venv's python.
+deactivate
+hash -r
+
 SRTCTL_APPLY_ARGS=(
     -f "$CONFIG_FILE"
     --tags "gb300,${MODEL_PREFIX},${PRECISION},${ISL}x${OSL},infmax-$(date +%Y%m%d)"
