@@ -8,6 +8,24 @@
     "model_repository": "deepseek-ai/DeepSeek-V4-Pro",
     "model_revision": "b5968e9190ef611bbf34a7229255be88a0e937c1",
     "model_stage_receipt": "model-stages/receipts/deepseek-v4-pro-lepton-gb300-b5968e9190ef.json",
+    "models": {
+      "Qwen/Qwen3.5-397B-A17B-FP8": {
+        "local_path": "/raid/scratch/benchops-oleizerov/models/Qwen3.5-397B-A17B-FP8-ea5b4f81096f",
+        "manifest_digest": "sha256:3bc4f54f36992c01270313ae4a6b75cadfec4d58f6874282acbd6ada24ab7502",
+        "model_repository": "Qwen/Qwen3.5-397B-A17B-FP8",
+        "model_revision": "ea5b4f81096f3901c91dea97f81324302495781d",
+        "model_stage_receipt": "model-stages/receipts/qwen3.5-397b-a17b-fp8-lepton-gb300-ea5b4f81096f.json",
+        "shared_path": "/scratch/fsw/users/oleizerov/models/Qwen3.5-397B-A17B-FP8-ea5b4f81096f"
+      },
+      "deepseek-ai/DeepSeek-V4-Pro": {
+        "local_path": "/raid/scratch/benchops-oleizerov/models/DeepSeek-V4-Pro-b5968e9190ef",
+        "manifest_digest": "sha256:e5c7488ed33c3ea7e9c047395718b7e0326514e8c4dc9c6d66b0dfd038774662",
+        "model_repository": "deepseek-ai/DeepSeek-V4-Pro",
+        "model_revision": "b5968e9190ef611bbf34a7229255be88a0e937c1",
+        "model_stage_receipt": "model-stages/receipts/deepseek-v4-pro-lepton-gb300-b5968e9190ef.json",
+        "shared_path": "/scratch/fsw/users/oleizerov/.benchops/models/DeepSeek-V4-Pro-b5968e9190ef"
+      }
+    },
     "partition": "batch",
     "runner_label": "gb300l-nv",
     "shared_path": "/scratch/fsw/users/oleizerov/.benchops/models/DeepSeek-V4-Pro-b5968e9190ef",

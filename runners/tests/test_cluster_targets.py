@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import subprocess
 import sys
 import unittest
 from pathlib import Path
@@ -26,6 +27,16 @@ class ResolveClusterTargetTests(unittest.TestCase):
             "model-stages/receipts/deepseek-v4-pro-lepton-gb300-b5968e9190ef.json",
         )
 
+    def test_lepton_declares_qwen_receipt_separately(self) -> None:
+        target = resolve_cluster_target.load_targets()["lepton-gb300"]
+        qwen = target["models"]["Qwen/Qwen3.5-397B-A17B-FP8"]
+        self.assertEqual(
+            qwen["model_stage_receipt"],
+            "model-stages/receipts/"
+            "qwen3.5-397b-a17b-fp8-lepton-gb300-ea5b4f81096f.json",
+        )
+        self.assertTrue(qwen["local_path"].startswith("/raid/scratch/"))
+
     def test_mismatched_profile_fails(self) -> None:
         with self.assertRaisesRegex(RuntimeError, "target/profile mismatch"):
             resolve_cluster_target.resolve("lepton-gb300", "nkx-gb300")
@@ -33,6 +44,43 @@ class ResolveClusterTargetTests(unittest.TestCase):
     def test_legacy_nkx_profile_resolves(self) -> None:
         result = resolve_cluster_target.resolve("", "nkx-gb300")
         self.assertEqual(result["target-cluster"], "nkx-gb300")
+
+
+class ClusterProfileTests(unittest.TestCase):
+    def _lepton_environment(self, model_contract: str) -> dict[str, str]:
+        script = RUNNERS / "cluster_profiles" / "lepton-gb300.sh"
+        model_prefix, precision, framework = model_contract.split("-", 2)
+        command = (
+            f"MODEL_PREFIX={model_prefix!r}; PRECISION={precision!r}; "
+            f"FRAMEWORK={framework!r}; source {str(script)!r}; "
+            "python3 -c 'import json,os; print(json.dumps(dict(os.environ)))'"
+        )
+        result = subprocess.run(
+            ["bash", "-c", command],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        return json.loads(result.stdout)
+
+    def test_lepton_qwen_does_not_inherit_deepseek_runtime_overlay(self) -> None:
+        environment = self._lepton_environment("qwen3.5-fp8-dynamo-sglang")
+        self.assertEqual(
+            environment["SRT_SLURM_QWEN35_FP8_REF"],
+            "3435776cd6db4c14f8b771ff7a3976deb62fe133",
+        )
+        self.assertEqual(
+            environment["IMAGE_SQUASH_SHA256"],
+            "e3c9ce21fa6f0f363dfb1fb4aff7a3b8dd55803b0c214c649719919a75b7bbe9",
+        )
+        self.assertEqual(environment["SRT_SLURM_ETCD_LEASE_TTL"], "600")
+        self.assertNotIn("SRT_SLURM_CPUS_PER_TASK", environment)
+        self.assertNotIn("SRT_SLURM_RUNTIME_ENV_JSON", environment)
+
+    def test_lepton_deepseek_keeps_reviewed_runtime_overlay(self) -> None:
+        environment = self._lepton_environment("dsv4-fp4-dynamo-vllm")
+        self.assertEqual(environment["SRT_SLURM_CPUS_PER_TASK"], "140")
+        self.assertIn("NVSHMEM_HCA_LIST", environment["SRT_SLURM_RUNTIME_ENV_JSON"])
 
 
 class TargetMatrixTests(unittest.TestCase):
@@ -93,9 +141,11 @@ class TargetMatrixTests(unittest.TestCase):
                     },
                 }
             )
-        self.assertEqual(
-            validate_cluster_target_matrix.validate("nkx-gb300", rows), 3
-        )
+        for target in ("nkx-gb300", "lepton-gb300"):
+            with self.subTest(target=target):
+                self.assertEqual(
+                    validate_cluster_target_matrix.validate(target, rows), 3
+                )
 
     def test_qwen35_fp8_single_readiness_probe_is_accepted(self) -> None:
         row = {
