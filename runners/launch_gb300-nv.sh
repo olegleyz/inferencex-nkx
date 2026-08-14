@@ -302,7 +302,7 @@ elif [[ $FRAMEWORK == "dynamo-sglang" && $MODEL_PREFIX == "qwen3.5" ]]; then
     git clone https://github.com/NVIDIA/srt-slurm.git "$SRT_REPO_DIR"
     cd "$SRT_REPO_DIR"
     if [[ $PRECISION == "fp8" ]]; then
-        git checkout v1.0.25
+        git checkout "${SRT_SLURM_QWEN35_FP8_REF:-v1.0.25}"
     else
         git checkout sa-submission-q2-2026
     fi

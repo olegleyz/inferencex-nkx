@@ -1,0 +1,186 @@
+{
+  "clusterId": "nkx-slinky-gb300-dev-01",
+  "localPath": "/scratch/models/Qwen3.5-397B-A17B-FP8-ea5b4f81096f",
+  "manifestDigest": "sha256:3bc4f54f36992c01270313ae4a6b75cadfec4d58f6874282acbd6ada24ab7502",
+  "model": {
+    "repository": "Qwen/Qwen3.5-397B-A17B-FP8",
+    "revision": "ea5b4f81096f3901c91dea97f81324302495781d",
+    "source": "huggingface"
+  },
+  "nodes": {
+    "copied": 0,
+    "failed": 0,
+    "required": 16,
+    "results": [
+      {
+        "availableBytes": 27255232352256,
+        "fileCount": 107,
+        "manifestDigest": "sha256:3bc4f54f36992c01270313ae4a6b75cadfec4d58f6874282acbd6ada24ab7502",
+        "node": "ip-100-64-134-242",
+        "path": "/scratch/models/Qwen3.5-397B-A17B-FP8-ea5b4f81096f",
+        "requiredBytes": 406198638888,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27254464327680,
+        "fileCount": 107,
+        "manifestDigest": "sha256:3bc4f54f36992c01270313ae4a6b75cadfec4d58f6874282acbd6ada24ab7502",
+        "node": "ip-100-64-138-242",
+        "path": "/scratch/models/Qwen3.5-397B-A17B-FP8-ea5b4f81096f",
+        "requiredBytes": 406198638888,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27255233634304,
+        "fileCount": 107,
+        "manifestDigest": "sha256:3bc4f54f36992c01270313ae4a6b75cadfec4d58f6874282acbd6ada24ab7502",
+        "node": "ip-100-64-148-224",
+        "path": "/scratch/models/Qwen3.5-397B-A17B-FP8-ea5b4f81096f",
+        "requiredBytes": 406198638888,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27255230672896,
+        "fileCount": 107,
+        "manifestDigest": "sha256:3bc4f54f36992c01270313ae4a6b75cadfec4d58f6874282acbd6ada24ab7502",
+        "node": "ip-100-64-173-209",
+        "path": "/scratch/models/Qwen3.5-397B-A17B-FP8-ea5b4f81096f",
+        "requiredBytes": 406198638888,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27255207620608,
+        "fileCount": 107,
+        "manifestDigest": "sha256:3bc4f54f36992c01270313ae4a6b75cadfec4d58f6874282acbd6ada24ab7502",
+        "node": "ip-100-64-181-193",
+        "path": "/scratch/models/Qwen3.5-397B-A17B-FP8-ea5b4f81096f",
+        "requiredBytes": 406198638888,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27255221542912,
+        "fileCount": 107,
+        "manifestDigest": "sha256:3bc4f54f36992c01270313ae4a6b75cadfec4d58f6874282acbd6ada24ab7502",
+        "node": "ip-100-64-195-223",
+        "path": "/scratch/models/Qwen3.5-397B-A17B-FP8-ea5b4f81096f",
+        "requiredBytes": 406198638888,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27255230763008,
+        "fileCount": 107,
+        "manifestDigest": "sha256:3bc4f54f36992c01270313ae4a6b75cadfec4d58f6874282acbd6ada24ab7502",
+        "node": "ip-100-64-211-112",
+        "path": "/scratch/models/Qwen3.5-397B-A17B-FP8-ea5b4f81096f",
+        "requiredBytes": 406198638888,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27255095300096,
+        "fileCount": 107,
+        "manifestDigest": "sha256:3bc4f54f36992c01270313ae4a6b75cadfec4d58f6874282acbd6ada24ab7502",
+        "node": "ip-100-64-212-204",
+        "path": "/scratch/models/Qwen3.5-397B-A17B-FP8-ea5b4f81096f",
+        "requiredBytes": 406198638888,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27255224360960,
+        "fileCount": 107,
+        "manifestDigest": "sha256:3bc4f54f36992c01270313ae4a6b75cadfec4d58f6874282acbd6ada24ab7502",
+        "node": "ip-100-64-216-168",
+        "path": "/scratch/models/Qwen3.5-397B-A17B-FP8-ea5b4f81096f",
+        "requiredBytes": 406198638888,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27255229562880,
+        "fileCount": 107,
+        "manifestDigest": "sha256:3bc4f54f36992c01270313ae4a6b75cadfec4d58f6874282acbd6ada24ab7502",
+        "node": "ip-100-64-226-161",
+        "path": "/scratch/models/Qwen3.5-397B-A17B-FP8-ea5b4f81096f",
+        "requiredBytes": 406198638888,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27255228383232,
+        "fileCount": 107,
+        "manifestDigest": "sha256:3bc4f54f36992c01270313ae4a6b75cadfec4d58f6874282acbd6ada24ab7502",
+        "node": "ip-100-64-232-100",
+        "path": "/scratch/models/Qwen3.5-397B-A17B-FP8-ea5b4f81096f",
+        "requiredBytes": 406198638888,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27254226808832,
+        "fileCount": 107,
+        "manifestDigest": "sha256:3bc4f54f36992c01270313ae4a6b75cadfec4d58f6874282acbd6ada24ab7502",
+        "node": "ip-100-64-237-78",
+        "path": "/scratch/models/Qwen3.5-397B-A17B-FP8-ea5b4f81096f",
+        "requiredBytes": 406198638888,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27255232114688,
+        "fileCount": 107,
+        "manifestDigest": "sha256:3bc4f54f36992c01270313ae4a6b75cadfec4d58f6874282acbd6ada24ab7502",
+        "node": "ip-100-64-239-237",
+        "path": "/scratch/models/Qwen3.5-397B-A17B-FP8-ea5b4f81096f",
+        "requiredBytes": 406198638888,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27255152906240,
+        "fileCount": 107,
+        "manifestDigest": "sha256:3bc4f54f36992c01270313ae4a6b75cadfec4d58f6874282acbd6ada24ab7502",
+        "node": "ip-100-64-248-153",
+        "path": "/scratch/models/Qwen3.5-397B-A17B-FP8-ea5b4f81096f",
+        "requiredBytes": 406198638888,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27254465175552,
+        "fileCount": 107,
+        "manifestDigest": "sha256:3bc4f54f36992c01270313ae4a6b75cadfec4d58f6874282acbd6ada24ab7502",
+        "node": "ip-100-64-252-30",
+        "path": "/scratch/models/Qwen3.5-397B-A17B-FP8-ea5b4f81096f",
+        "requiredBytes": 406198638888,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27254458216448,
+        "fileCount": 107,
+        "manifestDigest": "sha256:3bc4f54f36992c01270313ae4a6b75cadfec4d58f6874282acbd6ada24ab7502",
+        "node": "ip-100-64-254-227",
+        "path": "/scratch/models/Qwen3.5-397B-A17B-FP8-ea5b4f81096f",
+        "requiredBytes": 406198638888,
+        "state": "reused"
+      }
+    ],
+    "reused": 16,
+    "verified": 16
+  },
+  "recordPath": "/Users/oleizerov/Documents/code/ai-cluster-benchmarking-qwen-stage/.benchops/model-stages/qwen3.5-397b-a17b-fp8-gb300/20260814T041149226749Z",
+  "requiredModelBytes": 406198638888,
+  "schemaVersion": 1,
+  "sharedCopy": {
+    "availableBytes": 1266864095232,
+    "fileCount": 107,
+    "manifestDigest": "sha256:3bc4f54f36992c01270313ae4a6b75cadfec4d58f6874282acbd6ada24ab7502",
+    "node": "nkx-slinky-gb300-dev-01-login-01",
+    "path": "/scratch/fsw/users/oleizerov/models/Qwen3.5-397B-A17B-FP8-ea5b4f81096f",
+    "requiredBytes": 406198638888,
+    "state": "valid"
+  },
+  "sharedPath": "/scratch/fsw/users/oleizerov/models/Qwen3.5-397B-A17B-FP8-ea5b4f81096f",
+  "state": "ready",
+  "transfer": {
+    "concurrency": 4,
+    "estimatedBytes": 0,
+    "nodesRequired": []
+  },
+  "verification": {
+    "mode": "full-sha256",
+    "requireAllTargets": true
+  }
+}

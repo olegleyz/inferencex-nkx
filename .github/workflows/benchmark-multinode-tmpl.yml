@@ -383,6 +383,7 @@ jobs:
           cp "${{ inputs.model-stage-result-file }}" model-stage-result.json
           python3 runners/validate_model_stage_receipt.py \
             --target "${{ inputs.target-cluster }}" \
+            --model-repository "${{ inputs.model }}" \
             --receipt model-stage-result.json \
             --shared-manifest-output model-stage-shared-manifest.json \
             --github-env "$GITHUB_ENV"

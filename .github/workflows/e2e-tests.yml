@@ -246,6 +246,7 @@ jobs:
                   ALL_EVALS: ${{ inputs.all-evals }}
                   EVALS_ONLY: ${{ inputs.evals-only }}
                   TARGET_CLUSTER: ${{ steps.resolve-target.outputs.target-cluster }}
+                  READINESS_ONLY: ${{ inputs.readiness-only }}
               run: |
                   PRIORITY_ROOT="${GITHUB_WORKSPACE}"
                   if [ -d "${GITHUB_WORKSPACE}/.ci-priority" ]; then
@@ -285,8 +286,12 @@ jobs:
                       $GENERATE_COMMAND)
                   fi
                   if [ -n "$TARGET_CLUSTER" ]; then
+                    VALIDATE_ARGS=(--target "$TARGET_CLUSTER")
+                    if [ "$READINESS_ONLY" = "true" ]; then
+                      VALIDATE_ARGS+=(--readiness-only)
+                    fi
                     python3 runners/validate_cluster_target_matrix.py \
-                      --target "$TARGET_CLUSTER" <<<"$CONFIG_JSON"
+                      "${VALIDATE_ARGS[@]}" <<<"$CONFIG_JSON"
                   fi
                   score_matrix() {
                     local family="$1"

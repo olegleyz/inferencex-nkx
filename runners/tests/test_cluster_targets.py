@@ -38,7 +38,7 @@ class ResolveClusterTargetTests(unittest.TestCase):
 class TargetMatrixTests(unittest.TestCase):
     def _row(self) -> dict[str, object]:
         return {
-            "image": validate_cluster_target_matrix.IMAGE,
+            "image": validate_cluster_target_matrix.DEEPSEEK_IMAGE,
             "model": "deepseek-ai/DeepSeek-V4-Pro",
             "model-prefix": "dsv4",
             "precision": "fp4",
@@ -66,6 +66,64 @@ class TargetMatrixTests(unittest.TestCase):
         row["image"] = "example.invalid/changed:latest"
         with self.assertRaisesRegex(RuntimeError, "unreviewed target matrix entry"):
             validate_cluster_target_matrix.validate("lepton-gb300", [row])
+
+    def test_qwen35_fp8_native_matrix_is_accepted(self) -> None:
+        rows = []
+        for recipe in (
+            "1p1d-tp4-tp4.yaml",
+            "4p1d-dep4-dep16.yaml",
+            "8p1d-dep4-dep16.yaml",
+        ):
+            rows.append(
+                {
+                    "image": validate_cluster_target_matrix.QWEN35_FP8_IMAGE,
+                    "model": "Qwen/Qwen3.5-397B-A17B-FP8",
+                    "model-prefix": "qwen3.5",
+                    "precision": "fp8",
+                    "framework": "dynamo-sglang",
+                    "runner": "gb300",
+                    "isl": 8192,
+                    "osl": 1024,
+                    "run-eval": True,
+                    "prefill": {
+                        "additional-settings": [
+                            "CONFIG_FILE=recipes/sglang/qwen3.5/gb300-fp8/8k1k/"
+                            + recipe
+                        ]
+                    },
+                }
+            )
+        self.assertEqual(
+            validate_cluster_target_matrix.validate("nkx-gb300", rows), 3
+        )
+
+    def test_qwen35_fp8_single_readiness_probe_is_accepted(self) -> None:
+        row = {
+            "image": validate_cluster_target_matrix.QWEN35_FP8_IMAGE,
+            "model": "Qwen/Qwen3.5-397B-A17B-FP8",
+            "model-prefix": "qwen3.5",
+            "precision": "fp8",
+            "framework": "dynamo-sglang",
+            "runner": "gb300",
+            "isl": 8192,
+            "osl": 1024,
+            "run-eval": False,
+            "conc": [1],
+            "prefill": {
+                "additional-settings": [
+                    (
+                        "CONFIG_FILE=recipes/sglang/qwen3.5/gb300-fp8/8k1k/"
+                        "1p1d-tp4-tp4.yaml"
+                    )
+                ]
+            },
+        }
+        self.assertEqual(
+            validate_cluster_target_matrix.validate(
+                "nkx-gb300", [row], readiness_only=True
+            ),
+            1,
+        )
 
 
 class ReceiptTests(unittest.TestCase):
@@ -114,13 +172,35 @@ class ReceiptTests(unittest.TestCase):
             return_value={"test": target},
         ):
             self.assertEqual(
-                validate_model_stage_receipt.validate("test", receipt, manifest),
+                validate_model_stage_receipt.validate(
+                    "test", manifest["repository"], receipt, manifest
+                ),
                 "/local/model",
             )
 
             receipt["clusterId"] = "cluster-b"
             with self.assertRaisesRegex(RuntimeError, "does not match"):
-                validate_model_stage_receipt.validate("test", receipt, manifest)
+                validate_model_stage_receipt.validate(
+                    "test", manifest["repository"], receipt, manifest
+                )
+
+    def test_receipt_must_match_selected_model(self) -> None:
+        with patch.object(
+            validate_model_stage_receipt,
+            "load_targets",
+            return_value={
+                "test": {
+                    "models": {
+                        "owner/model-a": {
+                            "model_repository": "owner/model-a"
+                        }
+                    }
+                }
+            },
+        ), self.assertRaisesRegex(RuntimeError, "is not staged"):
+            validate_model_stage_receipt.validate(
+                "test", "owner/model-b", {}, {}
+            )
 
 
 if __name__ == "__main__":

@@ -26,12 +26,26 @@ def _manifest_digest(manifest: dict[str, Any]) -> str:
     return f"sha256:{hashlib.sha256(payload).hexdigest()}"
 
 
-def validate(target: str, receipt: dict[str, Any], manifest: dict[str, Any]) -> str:
+def validate(
+    target: str,
+    model_repository: str,
+    receipt: dict[str, Any],
+    manifest: dict[str, Any],
+) -> str:
     """Validate receipt identity, completeness, paths, and shared manifest."""
     targets = load_targets()
     if target not in targets:
         raise RuntimeError(f"unsupported target cluster: {target}")
-    expected = targets[target]
+    target_config = targets[target]
+    models = target_config.get("models")
+    if models is None:
+        expected = target_config
+    elif not isinstance(models, dict) or model_repository not in models:
+        raise RuntimeError(
+            f"model {model_repository!r} is not staged for target {target}"
+        )
+    else:
+        expected = {**target_config, **models[model_repository]}
     results = receipt.get("nodes", {}).get("results", [])
     nodes = [item.get("node") for item in results if isinstance(item, dict)]
     required = receipt.get("nodes", {}).get("required")
@@ -75,6 +89,7 @@ def validate(target: str, receipt: dict[str, Any], manifest: dict[str, Any]) -> 
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--target", required=True)
+    parser.add_argument("--model-repository", required=True)
     parser.add_argument("--receipt", type=Path, required=True)
     parser.add_argument("--shared-manifest-output", type=Path, required=True)
     parser.add_argument("--github-env", type=Path)
@@ -82,7 +97,7 @@ def main() -> None:
     receipt = _read_object(args.receipt)
     shared_manifest_path = Path(receipt["sharedPath"]) / ".benchops-model-manifest.json"
     manifest = _read_object(shared_manifest_path)
-    model_path = validate(args.target, receipt, manifest)
+    model_path = validate(args.target, args.model_repository, receipt, manifest)
     args.shared_manifest_output.write_text(
         json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
