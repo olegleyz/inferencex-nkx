@@ -367,7 +367,7 @@ elif [[ $FRAMEWORK == "dynamo-vllm" && $MODEL_PREFIX == "minimaxm3" ]]; then
     if [[ "${SPEC_DECODING:-}" == "mtp" ]]; then
         git checkout "${SRT_SLURM_MINIMAX_M3_REF:-v1.0.38}"
     else
-        git checkout sa-submission-q2-2026
+        git checkout "${SRT_SLURM_MINIMAX_M3_STANDARD_REF:-sa-submission-q2-2026}"
     fi
     mkdir -p recipes/vllm/minimax-m3-gb300-fp8
     cp -rT "$GITHUB_WORKSPACE/benchmarks/multi_node/srt-slurm-recipes/vllm/minimax-m3-gb300-fp8" recipes/vllm/minimax-m3-gb300-fp8

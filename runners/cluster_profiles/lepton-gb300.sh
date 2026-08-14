@@ -44,4 +44,23 @@ case "${MODEL_PREFIX:-}-${PRECISION:-}-${FRAMEWORK:-}" in
         export SRT_SLURM_ETCD_LEASE_TTL="600"
         export SRT_SLURM_HEALTH_MAX_ATTEMPTS="720"
         ;;
+    minimaxm3-fp8-dynamo-vllm)
+        export SRT_SLURM_ETCD_LEASE_TTL="600"
+        export SRT_SLURM_HEALTH_MAX_ATTEMPTS="720"
+        if [[ "${SPEC_DECODING:-none}" == "mtp" ]]; then
+            # The deleted Docker Hub nightly is recovered from vLLM's
+            # immutable, architecture-specific Public ECR publication.
+            export IMAGE_IMPORT_REGISTRY="public.ecr.aws"
+            export IMAGE_IMPORT_REPOSITORY="q9t5s3a7/vllm-release-repo"
+            export IMAGE_IMPORT_TAG="5e35a6f4f9bbc217c599692157ca985c894373f7-aarch64"
+            export IMAGE_IMPORT_REFERENCE="public.ecr.aws#q9t5s3a7/vllm-release-repo:5e35a6f4f9bbc217c599692157ca985c894373f7-aarch64"
+            export IMAGE_IMPORT_MANIFEST_SHA256="sha256:41442db2591d6bfb8dc219561f18deed55aaf5b95f910e5d9145186043d8eb94"
+            export SRT_SLURM_MINIMAX_M3_REF="c180328b98c3793ca84a1e24a030f90545eb7d5d"
+        else
+            # Exact Lepton image and srt-slurm revision from completed
+            # BenchOps MiniMax jobs, including Slurm job 484.
+            export IMAGE_SQUASH_SHA256="1ac422ddf87efdb3d9902e254dd7d56cc9ce9d152b59f2b7e9c0716595eab481"
+            export SRT_SLURM_MINIMAX_M3_STANDARD_REF="deb1dfd9934398664f92d194169c183e009da83b"
+        fi
+        ;;
 esac

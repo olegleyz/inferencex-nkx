@@ -123,6 +123,39 @@ class ClusterProfileTests(unittest.TestCase):
         self.assertEqual(environment["SRT_SLURM_CPUS_PER_TASK"], "140")
         self.assertIn("NVSHMEM_HCA_LIST", environment["SRT_SLURM_RUNTIME_ENV_JSON"])
 
+    def test_lepton_minimax_standard_uses_completed_benchops_artifacts(self) -> None:
+        environment = self._lepton_environment("minimaxm3-fp8-dynamo-vllm")
+        self.assertEqual(
+            environment["IMAGE_SQUASH_SHA256"],
+            "1ac422ddf87efdb3d9902e254dd7d56cc9ce9d152b59f2b7e9c0716595eab481",
+        )
+        self.assertEqual(
+            environment["SRT_SLURM_MINIMAX_M3_STANDARD_REF"],
+            "deb1dfd9934398664f92d194169c183e009da83b",
+        )
+        self.assertEqual(environment["SRT_SLURM_ETCD_LEASE_TTL"], "600")
+
+    def test_lepton_minimax_eagle_uses_immutable_original_image(self) -> None:
+        script = RUNNERS / "cluster_profiles" / "lepton-gb300.sh"
+        command = (
+            f"MODEL_PREFIX=minimaxm3; PRECISION=fp8; FRAMEWORK=dynamo-vllm; "
+            f"SPEC_DECODING=mtp; source {str(script)!r}; "
+            "python3 -c 'import json,os; print(json.dumps(dict(os.environ)))'"
+        )
+        result = subprocess.run(
+            ["bash", "-c", command], check=True, capture_output=True, text=True
+        )
+        environment = json.loads(result.stdout)
+        self.assertEqual(
+            environment["IMAGE_IMPORT_MANIFEST_SHA256"],
+            "sha256:41442db2591d6bfb8dc219561f18deed55aaf5b95f910e5d9145186043d8eb94",
+        )
+        self.assertEqual(
+            environment["SRT_SLURM_MINIMAX_M3_REF"],
+            "c180328b98c3793ca84a1e24a030f90545eb7d5d",
+        )
+        self.assertNotIn("IMAGE_SQUASH_SHA256", environment)
+
     def test_nkx_minimax_uses_immutable_original_aarch64_image(self) -> None:
         environment = self._nkx_environment("minimaxm3-fp8-dynamo-vllm")
         self.assertEqual(
@@ -254,15 +287,73 @@ class TargetMatrixTests(unittest.TestCase):
             },
         }
 
+    def _minimax_m3_standard_row(
+        self, recipe: str, conc: list[int]
+    ) -> dict[str, object]:
+        return {
+            "image": validate_cluster_target_matrix.MINIMAX_M3_STANDARD_IMAGE,
+            "model": "MiniMaxAI/MiniMax-M3-MXFP8",
+            "model-prefix": "minimaxm3",
+            "precision": "fp8",
+            "framework": "dynamo-vllm",
+            "runner": "gb300-nv",
+            "isl": 8192,
+            "osl": 1024,
+            "spec-decoding": "none",
+            "run-eval": False,
+            "conc": conc,
+            "prefill": {
+                "additional-settings": [
+                    "CONFIG_FILE=recipes/vllm/minimax-m3-gb300-fp8/"
+                    f"8k1k/{recipe}"
+                ]
+            },
+        }
+
     def test_minimax_m3_eagle3_matrix_is_accepted(self) -> None:
-        recipes = sorted(
-            validate_cluster_target_matrix.CONTRACTS[
-                "MiniMaxAI/MiniMax-M3-MXFP8"
-            ]["recipes"]
-        )
-        rows = [self._minimax_m3_row(recipe) for recipe in recipes]
+        contract = validate_cluster_target_matrix.MINIMAX_M3_EAGLE3_CONTRACT
+        rows = []
+        for recipe, conc in contract["concurrencies"].items():
+            row = self._minimax_m3_row(recipe)
+            row["conc"] = conc
+            rows.append(row)
         self.assertEqual(
             validate_cluster_target_matrix.validate("nkx-gb300", rows), 11
+        )
+
+    def test_minimax_m3_standard_matrix_is_accepted_on_lepton(self) -> None:
+        contract = validate_cluster_target_matrix.MINIMAX_M3_STANDARD_CONTRACT
+        rows = [
+            self._minimax_m3_standard_row(recipe, conc)
+            for recipe, conc in contract["concurrencies"].items()
+        ]
+        self.assertEqual(
+            validate_cluster_target_matrix.validate("lepton-gb300", rows), 9
+        )
+
+    def test_minimax_m3_standard_concurrency_drift_is_rejected(self) -> None:
+        row = self._minimax_m3_standard_row(
+            "1p1d-dep2-tep8-8k1k.yaml", [64]
+        )
+        with self.assertRaisesRegex(RuntimeError, "unreviewed concurrency set"):
+            validate_cluster_target_matrix.validate("lepton-gb300", [row])
+
+    def test_minimax_m3_standard_is_isolated_to_lepton(self) -> None:
+        row = self._minimax_m3_standard_row(
+            "1p1d-dep2-tep8-8k1k.yaml", [128]
+        )
+        with self.assertRaisesRegex(RuntimeError, "not enabled for target"):
+            validate_cluster_target_matrix.validate("nkx-gb300", [row])
+
+    def test_minimax_m3_standard_readiness_uses_reviewed_topology(self) -> None:
+        row = self._minimax_m3_standard_row(
+            "1p1d-dep2-tep8-8k1k.yaml", [128]
+        )
+        self.assertEqual(
+            validate_cluster_target_matrix.validate(
+                "lepton-gb300", [row], readiness_only=True
+            ),
+            1,
         )
 
     def test_minimax_m3_readiness_is_only_reviewed_tp4_probe(self) -> None:

@@ -16,6 +16,90 @@ QWEN35_FP8_IMAGE = "lmsysorg/sglang:nightly-dev-cu13-20260709-074bb928"
 MINIMAX_M3_EAGLE3_IMAGE = (
     "vllm/vllm-openai:nightly-5e35a6f4f9bbc217c599692157ca985c894373f7"
 )
+MINIMAX_M3_STANDARD_IMAGE = (
+    "vllm/vllm-openai:nightly-4080263bb2c5d10deac17aaeb88e0823bc35bca9"
+)
+
+MINIMAX_M3_STANDARD_CONTRACT = {
+    "targets": {"lepton-gb300"},
+    "expected": {
+        "image": MINIMAX_M3_STANDARD_IMAGE,
+        "model": "MiniMaxAI/MiniMax-M3-MXFP8",
+        "model-prefix": "minimaxm3",
+        "precision": "fp8",
+        "framework": "dynamo-vllm",
+        "runner": "gb300-nv",
+        "isl": 8192,
+        "osl": 1024,
+        "spec-decoding": "none",
+        "run-eval": False,
+    },
+    "recipe_prefix": "recipes/vllm/minimax-m3-gb300-fp8/8k1k/",
+    "recipes": {
+        "1p1d-dep2-dep8-8k1k.yaml",
+        "1p1d-dep2-tep8-8k1k.yaml",
+        "1p2d-dep2-tep8-8k1k.yaml",
+        "2p1d-dep2-dep8-8k1k.yaml",
+        "2p2d-dep2-tep8-8k1k.yaml",
+        "2p4d-dep2-tep4-8k1k.yaml",
+        "3p1d-dep2-dep16-8k1k.yaml",
+        "3p1d-dep2-dep8-8k1k.yaml",
+        "6p1d-dep2-dep8-8k1k.yaml",
+    },
+    "concurrencies": {
+        "1p1d-dep2-dep8-8k1k.yaml": [256],
+        "1p1d-dep2-tep8-8k1k.yaml": [128],
+        "1p2d-dep2-tep8-8k1k.yaml": [32, 64, 128],
+        "2p1d-dep2-dep8-8k1k.yaml": [512],
+        "2p2d-dep2-tep8-8k1k.yaml": [16],
+        "2p4d-dep2-tep4-8k1k.yaml": [4],
+        "3p1d-dep2-dep16-8k1k.yaml": [512],
+        "3p1d-dep2-dep8-8k1k.yaml": [1024],
+        "6p1d-dep2-dep8-8k1k.yaml": [2048],
+    },
+}
+
+MINIMAX_M3_EAGLE3_CONTRACT = {
+    "expected": {
+        "image": MINIMAX_M3_EAGLE3_IMAGE,
+        "model": "MiniMaxAI/MiniMax-M3-MXFP8",
+        "model-prefix": "minimaxm3",
+        "precision": "fp8",
+        "framework": "dynamo-vllm",
+        "runner": "gb300-nv",
+        "isl": 8192,
+        "osl": 1024,
+        "spec-decoding": "mtp",
+        "run-eval": False,
+    },
+    "recipe_prefix": "recipes/vllm/minimax-m3-gb300-fp8/8k1k/mtp/",
+    "recipes": {
+        "1p1d-dep2-dep8-eagle3-c64-8k1k.yaml",
+        "1p1d-dep2-tp4-eagle3-c1-8k1k.yaml",
+        "1p1d-dep2-tp4-eagle3-c8-8k1k.yaml",
+        "1p1d-dep2-tp8-eagle3-c1-8k1k.yaml",
+        "1p1d-dep2-tp8-eagle3-c4-8k1k.yaml",
+        "1p1d-dep2-tp8-eagle3-c8-8k1k.yaml",
+        "2p1d-dep2-dep8-eagle3-c512-8k1k.yaml",
+        "3p1d-dep2-dep8-eagle3-c256-8k1k.yaml",
+        "4p1d-dep2-dep8-eagle3-c1024-8k1k.yaml",
+        "4p1d-dep2-dep8-eagle3-c2048-8k1k.yaml",
+        "6p1d-dep2-dep8-eagle3-c2048-8k1k.yaml",
+    },
+    "concurrencies": {
+        "1p1d-dep2-dep8-eagle3-c64-8k1k.yaml": [64],
+        "1p1d-dep2-tp4-eagle3-c1-8k1k.yaml": [1],
+        "1p1d-dep2-tp4-eagle3-c8-8k1k.yaml": [8],
+        "1p1d-dep2-tp8-eagle3-c1-8k1k.yaml": [1],
+        "1p1d-dep2-tp8-eagle3-c4-8k1k.yaml": [4],
+        "1p1d-dep2-tp8-eagle3-c8-8k1k.yaml": [8],
+        "2p1d-dep2-dep8-eagle3-c512-8k1k.yaml": [512],
+        "3p1d-dep2-dep8-eagle3-c256-8k1k.yaml": [256],
+        "4p1d-dep2-dep8-eagle3-c1024-8k1k.yaml": [1024],
+        "4p1d-dep2-dep8-eagle3-c2048-8k1k.yaml": [2048],
+        "6p1d-dep2-dep8-eagle3-c2048-8k1k.yaml": [2048],
+    },
+}
 
 CONTRACTS = {
     "deepseek-ai/DeepSeek-V4-Pro": {
@@ -61,34 +145,7 @@ CONTRACTS = {
             "8p1d-dep4-dep16.yaml",
         },
     },
-    "MiniMaxAI/MiniMax-M3-MXFP8": {
-        "expected": {
-            "image": MINIMAX_M3_EAGLE3_IMAGE,
-            "model": "MiniMaxAI/MiniMax-M3-MXFP8",
-            "model-prefix": "minimaxm3",
-            "precision": "fp8",
-            "framework": "dynamo-vllm",
-            "runner": "gb300-nv",
-            "isl": 8192,
-            "osl": 1024,
-            "spec-decoding": "mtp",
-            "run-eval": False,
-        },
-        "recipe_prefix": "recipes/vllm/minimax-m3-gb300-fp8/8k1k/mtp/",
-        "recipes": {
-            "1p1d-dep2-dep8-eagle3-c64-8k1k.yaml",
-            "1p1d-dep2-tp4-eagle3-c1-8k1k.yaml",
-            "1p1d-dep2-tp4-eagle3-c8-8k1k.yaml",
-            "1p1d-dep2-tp8-eagle3-c1-8k1k.yaml",
-            "1p1d-dep2-tp8-eagle3-c4-8k1k.yaml",
-            "1p1d-dep2-tp8-eagle3-c8-8k1k.yaml",
-            "2p1d-dep2-dep8-eagle3-c512-8k1k.yaml",
-            "3p1d-dep2-dep8-eagle3-c256-8k1k.yaml",
-            "4p1d-dep2-dep8-eagle3-c1024-8k1k.yaml",
-            "4p1d-dep2-dep8-eagle3-c2048-8k1k.yaml",
-            "6p1d-dep2-dep8-eagle3-c2048-8k1k.yaml",
-        },
-    },
+    "MiniMaxAI/MiniMax-M3-MXFP8": MINIMAX_M3_EAGLE3_CONTRACT,
 }
 
 
@@ -116,14 +173,29 @@ def validate(target: str, matrix: Any, *, readiness_only: bool = False) -> int:
         rendered = sorted(repr(value) for value in models)
         raise RuntimeError(f"unreviewed target matrix model set: {rendered!r}")
     contract = CONTRACTS[model]
+    if model == "MiniMaxAI/MiniMax-M3-MXFP8":
+        spec_modes = {row.get("spec-decoding") for row in matrix}
+        if spec_modes == {"none"}:
+            contract = MINIMAX_M3_STANDARD_CONTRACT
+        elif spec_modes == {"mtp"}:
+            contract = MINIMAX_M3_EAGLE3_CONTRACT
+        else:
+            raise RuntimeError(f"unreviewed MiniMax spec-decoding set: {spec_modes!r}")
+    is_standard_minimax = contract is MINIMAX_M3_STANDARD_CONTRACT
+    allowed_targets = contract.get("targets")
+    if allowed_targets is not None and target not in allowed_targets:
+        raise RuntimeError(f"reviewed contract is not enabled for target {target}")
     recipes = contract["recipes"]
     if readiness_only:
         readiness_recipes = {
             "Qwen/Qwen3.5-397B-A17B-FP8": "1p1d-tp4-tp4.yaml",
-            "MiniMaxAI/MiniMax-M3-MXFP8": (
-                "1p1d-dep2-tp4-eagle3-c1-8k1k.yaml"
-            ),
         }
+        if model == "MiniMaxAI/MiniMax-M3-MXFP8":
+            readiness_recipes[model] = (
+                "1p1d-dep2-tep8-8k1k.yaml"
+                if is_standard_minimax
+                else "1p1d-dep2-tp4-eagle3-c1-8k1k.yaml"
+            )
         if model not in readiness_recipes or len(matrix) != 1:
             raise RuntimeError("readiness target must be one reviewed probe")
         expected = dict(contract["expected"])
@@ -156,8 +228,18 @@ def validate(target: str, matrix: Any, *, readiness_only: bool = False) -> int:
         name = recipe.rsplit("/", 1)[-1]
         if name not in recipes or name in seen:
             raise RuntimeError(f"unreviewed or duplicate target recipe: {name}")
-        if readiness_only and row.get("conc") != [1]:
-            raise RuntimeError("readiness target must use concurrency [1]")
+        expected_concurrencies = contract.get("concurrencies", {}).get(name)
+        if not readiness_only and expected_concurrencies is not None:
+            if row.get("conc") != expected_concurrencies:
+                raise RuntimeError(
+                    f"unreviewed concurrency set for {name}: {row.get('conc')!r}"
+                )
+        if readiness_only:
+            allowed = [128] if is_standard_minimax else [1]
+            if row.get("conc") != allowed:
+                raise RuntimeError(
+                    f"readiness target must use input concurrency {allowed!r}"
+                )
         seen.add(name)
     return len(matrix)
 
