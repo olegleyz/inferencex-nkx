@@ -66,6 +66,15 @@ case "${MODEL_PREFIX:-}-${PRECISION:-}-${FRAMEWORK:-}" in
             # cannot inherit the x86_64 GitHub runner installation.
             export SRT_SLURM_COMPUTE_UV_VERSION="0.12.4"
             export SRT_SLURM_COMPUTE_UV_SHA256="49d881b3403187e1f1789720881e77e4251ad4259d86c4844862657d2a35d13f"
+            # The exact MiniMax image bundles UCX 1.21.0, whose CUDA-VMM
+            # registration path produces ibv_reg_mr(Bad address) and silently
+            # forces vLLM to recompute KV blocks. Use the same pinned UCX
+            # 1.22.0 native-RoCE repair proven on NKX GB300, rebuilt against
+            # this image's exact NIXL 1.3.1 plugin. TCP remains excluded.
+            export INFERENCEX_UCX_OVERLAY="/scratch/fsw/users/oleizerov/.inferencex/runtime-overlays/ucx-1.22.0-minimax-nixl-1.3.1"
+            export INFERENCEX_UCX_OVERLAY_COMMIT="8a6b06fb880accbb933a79cda893883872c68d9d"
+            export INFERENCEX_UCX_OVERLAY_VERSION="1.22.0"
+            export SRT_SLURM_RUNTIME_ENV_JSON="{\"LD_LIBRARY_PATH\":\"${INFERENCEX_UCX_OVERLAY}/lib:/usr/local/lib/python3.12/dist-packages/.nixl_cu13.mesonpy.libs\",\"NIXL_PLUGIN_DIR\":\"${INFERENCEX_UCX_OVERLAY}/nixl/plugins\",\"UCX_MODULE_DIR\":\"${INFERENCEX_UCX_OVERLAY}/lib/ucx\",\"UCX_RNDV_PIPELINE_ERROR_HANDLING\":\"y\",\"UCX_TLS\":\"^tcp\"}"
         fi
         ;;
 esac

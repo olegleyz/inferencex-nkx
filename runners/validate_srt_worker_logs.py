@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Reject srt-slurm runs whose worker processes failed during startup."""
+"""Reject srt-slurm runs with worker or native KV-transport failures."""
 
 from __future__ import annotations
 
@@ -15,11 +15,19 @@ FATAL_PATTERNS = (
     re.compile(r"(?:torch\.)?OutOfMemoryError"),
     re.compile(r"CUDA out of memory", re.IGNORECASE),
     re.compile(r"Segmentation fault", re.IGNORECASE),
+    # NIXL can fall back to recomputing KV blocks after a UCX registration or
+    # transfer failure.  The benchmark may still complete, but that is not a
+    # valid disaggregated native-RoCE result and must not be collected as one.
+    re.compile(r"ibv_reg_mr.*Bad address", re.IGNORECASE),
+    re.compile(r"NIXL_ERR_BACKEND"),
+    re.compile(r"transfer_setup_failed", re.IGNORECASE),
+    re.compile(r"NIXL transfer failure", re.IGNORECASE),
+    re.compile(r"invalid KV blocks", re.IGNORECASE),
 )
 
 
 def find_startup_failures(logs_dir: Path) -> dict[Path, list[str]]:
-    """Return matching fatal lines keyed by worker log path."""
+    """Return matching worker or native KV-transport failures by log path."""
     failures: dict[Path, list[str]] = {}
     for path in sorted(logs_dir.glob("*_w*.out")):
         matches: list[str] = []

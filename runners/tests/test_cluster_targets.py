@@ -153,6 +153,13 @@ class ClusterProfileTests(unittest.TestCase):
             "deb1dfd9934398664f92d194169c183e009da83b",
         )
         self.assertEqual(environment["SRT_SLURM_ETCD_LEASE_TTL"], "600")
+        self.assertEqual(environment["INFERENCEX_UCX_OVERLAY_VERSION"], "1.22.0")
+        runtime_environment = json.loads(environment["SRT_SLURM_RUNTIME_ENV_JSON"])
+        self.assertEqual(runtime_environment["UCX_TLS"], "^tcp")
+        self.assertIn(
+            "ucx-1.22.0-minimax-nixl-1.3.1",
+            runtime_environment["NIXL_PLUGIN_DIR"],
+        )
 
     def test_lepton_minimax_eagle_uses_immutable_original_image(self) -> None:
         script = RUNNERS / "cluster_profiles" / "lepton-gb300.sh"
@@ -174,6 +181,8 @@ class ClusterProfileTests(unittest.TestCase):
             "c180328b98c3793ca84a1e24a030f90545eb7d5d",
         )
         self.assertNotIn("IMAGE_SQUASH_SHA256", environment)
+        self.assertNotIn("INFERENCEX_UCX_OVERLAY", environment)
+        self.assertNotIn("SRT_SLURM_RUNTIME_ENV_JSON", environment)
 
     def test_nkx_minimax_uses_immutable_original_aarch64_image(self) -> None:
         environment = self._nkx_environment("minimaxm3-fp8-dynamo-vllm")

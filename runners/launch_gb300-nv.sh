@@ -186,6 +186,28 @@ elif [[ -n "${SPECULATIVE_MODEL_PATH_OVERRIDE:-}" ]]; then
     exit 1
 fi
 
+# A runtime overlay is prepared once by a focused, single-task build. Worker
+# ranks may only consume a complete, checksum-verified artifact; they never
+# install, upgrade, or repair UCX while a benchmark is starting.
+verify_ucx_overlay() {
+    local overlay="$1" manifest checksums
+    manifest="${overlay}/inferencex-ucx-overlay.manifest"
+    checksums="${overlay}/inferencex-ucx-overlay.sha256"
+    test -f "$manifest"
+    test -f "$checksums"
+    grep -qx "ucx_commit=${INFERENCEX_UCX_OVERLAY_COMMIT}" "$manifest"
+    grep -qx "ucx_version=${INFERENCEX_UCX_OVERLAY_VERSION}" "$manifest"
+    grep -qx "nixl_plugin_sha256=961cbe4378d11f99194da241c90c1e3e3f3304e40eede69ee4135e6009f58d9a" "$manifest"
+    (cd "$overlay" && sha256sum --check "$(basename "$checksums")")
+    echo "Verified native-RoCE UCX overlay: $overlay"
+}
+
+if [[ -n "${INFERENCEX_UCX_OVERLAY:-}" ]]; then
+    : "${INFERENCEX_UCX_OVERLAY_COMMIT:?missing overlay commit}"
+    : "${INFERENCEX_UCX_OVERLAY_VERSION:?missing overlay version}"
+    verify_ucx_overlay "$INFERENCEX_UCX_OVERLAY"
+fi
+
 NGINX_IMAGE="nginx:1.27.4"
 
 # Squash files live on the Vast NFS storage; use the /data/ mount
