@@ -38,6 +38,25 @@ class ResolveClusterTargetTests(unittest.TestCase):
         self.assertTrue(qwen["local_path"].startswith("/raid/scratch/"))
         self.assertEqual(qwen["expected_nodes_minimum"], 12)
 
+    def test_lepton_declares_minimax_base_and_draft_receipts(self) -> None:
+        target = resolve_cluster_target.load_targets()["lepton-gb300"]
+        base = target["models"]["MiniMaxAI/MiniMax-M3-MXFP8"]
+        draft = target["models"]["Inferact/MiniMax-M3-EAGLE3-GQA"]
+        self.assertEqual(base["expected_nodes_minimum"], 15)
+        self.assertEqual(draft["expected_nodes_minimum"], 15)
+        self.assertEqual(
+            base["model_stage_receipt"],
+            "model-stages/receipts/"
+            "minimax-m3-mxfp8-lepton-gb300-c5454eb03678.json",
+        )
+        self.assertEqual(
+            draft["model_stage_receipt"],
+            "model-stages/receipts/"
+            "minimax-m3-eagle3-gqa-lepton-gb300-96692486b5fd.json",
+        )
+        self.assertTrue(base["local_path"].startswith("/raid/scratch/"))
+        self.assertTrue(draft["local_path"].startswith("/raid/scratch/"))
+
     def test_mismatched_profile_fails(self) -> None:
         with self.assertRaisesRegex(RuntimeError, "target/profile mismatch"):
             resolve_cluster_target.resolve("lepton-gb300", "nkx-gb300")

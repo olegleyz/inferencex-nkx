@@ -75,6 +75,16 @@ reserved. No node names or manual exclusion list are committed. The plan must
 be reviewed immediately before staging, and the resulting receipt freezes the
 exact workers that were required and verified for that execution.
 
+On August 14, 2026, both dynamic plans resolved 15 schedulable `batch`
+workers. Base-model staging Slurm job `1129` copied, checksum-verified, and
+atomically published the model on all 15 workers; independent full-SHA256
+audit job `1130` then verified 15/15 with zero failures. EAGLE3 staging job
+`1132` copied and verified 15/15, followed by independent full-SHA256 audit
+job `1133`, also 15/15 with zero failures. The committed receipts are:
+
+- `model-stages/receipts/minimax-m3-mxfp8-lepton-gb300-c5454eb03678.json`
+- `model-stages/receipts/minimax-m3-eagle3-gqa-lepton-gb300-96692486b5fd.json`
+
 ## Dispatch sequence
 
 Do not dispatch until both model receipts are committed and every active

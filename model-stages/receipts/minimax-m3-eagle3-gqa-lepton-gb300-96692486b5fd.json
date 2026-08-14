@@ -1,0 +1,177 @@
+{
+  "clusterId": "nkx-slinky-lepton-gb300-dev-02",
+  "localPath": "/raid/scratch/benchops-oleizerov/models/MiniMax-M3-EAGLE3-GQA-96692486b5fd",
+  "manifestDigest": "sha256:80b9d422bf51734bf429fa93286387d9fd362ed0e417a77f10de7d71fd190ee8",
+  "model": {
+    "repository": "Inferact/MiniMax-M3-EAGLE3-GQA",
+    "revision": "96692486b5fd38ebf8fd2a5f6bb53427d30819a8",
+    "source": "huggingface"
+  },
+  "nodes": {
+    "copied": 0,
+    "failed": 0,
+    "required": 15,
+    "results": [
+      {
+        "availableBytes": 27628026609664,
+        "fileCount": 5,
+        "manifestDigest": "sha256:80b9d422bf51734bf429fa93286387d9fd362ed0e417a77f10de7d71fd190ee8",
+        "node": "ip-100-64-128-119",
+        "path": "/raid/scratch/benchops-oleizerov/models/MiniMax-M3-EAGLE3-GQA-96692486b5fd",
+        "requiredBytes": 6149993396,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27681544716288,
+        "fileCount": 5,
+        "manifestDigest": "sha256:80b9d422bf51734bf429fa93286387d9fd362ed0e417a77f10de7d71fd190ee8",
+        "node": "ip-100-64-134-190",
+        "path": "/raid/scratch/benchops-oleizerov/models/MiniMax-M3-EAGLE3-GQA-96692486b5fd",
+        "requiredBytes": 6149993396,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27666006949888,
+        "fileCount": 5,
+        "manifestDigest": "sha256:80b9d422bf51734bf429fa93286387d9fd362ed0e417a77f10de7d71fd190ee8",
+        "node": "ip-100-64-143-5",
+        "path": "/raid/scratch/benchops-oleizerov/models/MiniMax-M3-EAGLE3-GQA-96692486b5fd",
+        "requiredBytes": 6149993396,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27461842903040,
+        "fileCount": 5,
+        "manifestDigest": "sha256:80b9d422bf51734bf429fa93286387d9fd362ed0e417a77f10de7d71fd190ee8",
+        "node": "ip-100-64-174-183",
+        "path": "/raid/scratch/benchops-oleizerov/models/MiniMax-M3-EAGLE3-GQA-96692486b5fd",
+        "requiredBytes": 6149993396,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27670879268864,
+        "fileCount": 5,
+        "manifestDigest": "sha256:80b9d422bf51734bf429fa93286387d9fd362ed0e417a77f10de7d71fd190ee8",
+        "node": "ip-100-64-175-14",
+        "path": "/raid/scratch/benchops-oleizerov/models/MiniMax-M3-EAGLE3-GQA-96692486b5fd",
+        "requiredBytes": 6149993396,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27680242085888,
+        "fileCount": 5,
+        "manifestDigest": "sha256:80b9d422bf51734bf429fa93286387d9fd362ed0e417a77f10de7d71fd190ee8",
+        "node": "ip-100-64-194-51",
+        "path": "/raid/scratch/benchops-oleizerov/models/MiniMax-M3-EAGLE3-GQA-96692486b5fd",
+        "requiredBytes": 6149993396,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27680304545792,
+        "fileCount": 5,
+        "manifestDigest": "sha256:80b9d422bf51734bf429fa93286387d9fd362ed0e417a77f10de7d71fd190ee8",
+        "node": "ip-100-64-196-11",
+        "path": "/raid/scratch/benchops-oleizerov/models/MiniMax-M3-EAGLE3-GQA-96692486b5fd",
+        "requiredBytes": 6149993396,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27461685538816,
+        "fileCount": 5,
+        "manifestDigest": "sha256:80b9d422bf51734bf429fa93286387d9fd362ed0e417a77f10de7d71fd190ee8",
+        "node": "ip-100-64-196-30",
+        "path": "/raid/scratch/benchops-oleizerov/models/MiniMax-M3-EAGLE3-GQA-96692486b5fd",
+        "requiredBytes": 6149993396,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27466514018304,
+        "fileCount": 5,
+        "manifestDigest": "sha256:80b9d422bf51734bf429fa93286387d9fd362ed0e417a77f10de7d71fd190ee8",
+        "node": "ip-100-64-197-14",
+        "path": "/raid/scratch/benchops-oleizerov/models/MiniMax-M3-EAGLE3-GQA-96692486b5fd",
+        "requiredBytes": 6149993396,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27680344764416,
+        "fileCount": 5,
+        "manifestDigest": "sha256:80b9d422bf51734bf429fa93286387d9fd362ed0e417a77f10de7d71fd190ee8",
+        "node": "ip-100-64-198-138",
+        "path": "/raid/scratch/benchops-oleizerov/models/MiniMax-M3-EAGLE3-GQA-96692486b5fd",
+        "requiredBytes": 6149993396,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27681566171136,
+        "fileCount": 5,
+        "manifestDigest": "sha256:80b9d422bf51734bf429fa93286387d9fd362ed0e417a77f10de7d71fd190ee8",
+        "node": "ip-100-64-210-114",
+        "path": "/raid/scratch/benchops-oleizerov/models/MiniMax-M3-EAGLE3-GQA-96692486b5fd",
+        "requiredBytes": 6149993396,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27685036556288,
+        "fileCount": 5,
+        "manifestDigest": "sha256:80b9d422bf51734bf429fa93286387d9fd362ed0e417a77f10de7d71fd190ee8",
+        "node": "ip-100-64-211-68",
+        "path": "/raid/scratch/benchops-oleizerov/models/MiniMax-M3-EAGLE3-GQA-96692486b5fd",
+        "requiredBytes": 6149993396,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27680242372608,
+        "fileCount": 5,
+        "manifestDigest": "sha256:80b9d422bf51734bf429fa93286387d9fd362ed0e417a77f10de7d71fd190ee8",
+        "node": "ip-100-64-217-51",
+        "path": "/raid/scratch/benchops-oleizerov/models/MiniMax-M3-EAGLE3-GQA-96692486b5fd",
+        "requiredBytes": 6149993396,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27466455953408,
+        "fileCount": 5,
+        "manifestDigest": "sha256:80b9d422bf51734bf429fa93286387d9fd362ed0e417a77f10de7d71fd190ee8",
+        "node": "ip-100-64-226-34",
+        "path": "/raid/scratch/benchops-oleizerov/models/MiniMax-M3-EAGLE3-GQA-96692486b5fd",
+        "requiredBytes": 6149993396,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27681610182656,
+        "fileCount": 5,
+        "manifestDigest": "sha256:80b9d422bf51734bf429fa93286387d9fd362ed0e417a77f10de7d71fd190ee8",
+        "node": "ip-100-64-227-57",
+        "path": "/raid/scratch/benchops-oleizerov/models/MiniMax-M3-EAGLE3-GQA-96692486b5fd",
+        "requiredBytes": 6149993396,
+        "state": "reused"
+      }
+    ],
+    "reused": 15,
+    "verified": 15
+  },
+  "recordPath": "/Users/oleizerov/Documents/code/ai-cluster-benchmarking-qwen-stage/.benchops/model-stages/minimax-m3-eagle3-gqa-lepton-gb300/20260814T173007856670Z",
+  "requiredModelBytes": 6149993396,
+  "schemaVersion": 1,
+  "sharedCopy": {
+    "availableBytes": 2110299570176,
+    "fileCount": 5,
+    "manifestDigest": "sha256:80b9d422bf51734bf429fa93286387d9fd362ed0e417a77f10de7d71fd190ee8",
+    "node": "ip-100-64-168-237",
+    "path": "/scratch/fsw/users/oleizerov/models/MiniMax-M3-EAGLE3-GQA-96692486b5fd",
+    "requiredBytes": 6149993396,
+    "state": "valid"
+  },
+  "sharedPath": "/scratch/fsw/users/oleizerov/models/MiniMax-M3-EAGLE3-GQA-96692486b5fd",
+  "state": "ready",
+  "transfer": {
+    "concurrency": 4,
+    "estimatedBytes": 0,
+    "nodesRequired": []
+  },
+  "verification": {
+    "mode": "full-sha256",
+    "requireAllTargets": true
+  }
+}

@@ -9,6 +9,24 @@
     "model_revision": "b5968e9190ef611bbf34a7229255be88a0e937c1",
     "model_stage_receipt": "model-stages/receipts/deepseek-v4-pro-lepton-gb300-b5968e9190ef.json",
     "models": {
+      "Inferact/MiniMax-M3-EAGLE3-GQA": {
+        "expected_nodes_minimum": 15,
+        "local_path": "/raid/scratch/benchops-oleizerov/models/MiniMax-M3-EAGLE3-GQA-96692486b5fd",
+        "manifest_digest": "sha256:80b9d422bf51734bf429fa93286387d9fd362ed0e417a77f10de7d71fd190ee8",
+        "model_repository": "Inferact/MiniMax-M3-EAGLE3-GQA",
+        "model_revision": "96692486b5fd38ebf8fd2a5f6bb53427d30819a8",
+        "model_stage_receipt": "model-stages/receipts/minimax-m3-eagle3-gqa-lepton-gb300-96692486b5fd.json",
+        "shared_path": "/scratch/fsw/users/oleizerov/models/MiniMax-M3-EAGLE3-GQA-96692486b5fd"
+      },
+      "MiniMaxAI/MiniMax-M3-MXFP8": {
+        "expected_nodes_minimum": 15,
+        "local_path": "/raid/scratch/benchops-oleizerov/models/MiniMax-M3-MXFP8-c5454eb03678",
+        "manifest_digest": "sha256:47c93af2b64f6ad8ff2b48eb02dbfc80183b8c223067d4599997c098ae42ddae",
+        "model_repository": "MiniMaxAI/MiniMax-M3-MXFP8",
+        "model_revision": "c5454eb03678d8710e54a4e0fc681b9f3b4a3dba",
+        "model_stage_receipt": "model-stages/receipts/minimax-m3-mxfp8-lepton-gb300-c5454eb03678.json",
+        "shared_path": "/scratch/fsw/users/oleizerov/models/MiniMax-M3-MXFP8-c5454eb03678"
+      },
       "Qwen/Qwen3.5-397B-A17B-FP8": {
         "expected_nodes_minimum": 12,
         "local_path": "/raid/scratch/benchops-oleizerov/models/Qwen3.5-397B-A17B-FP8-ea5b4f81096f",

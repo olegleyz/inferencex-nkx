@@ -1,0 +1,177 @@
+{
+  "clusterId": "nkx-slinky-lepton-gb300-dev-02",
+  "localPath": "/raid/scratch/benchops-oleizerov/models/MiniMax-M3-MXFP8-c5454eb03678",
+  "manifestDigest": "sha256:47c93af2b64f6ad8ff2b48eb02dbfc80183b8c223067d4599997c098ae42ddae",
+  "model": {
+    "repository": "MiniMaxAI/MiniMax-M3-MXFP8",
+    "revision": "c5454eb03678d8710e54a4e0fc681b9f3b4a3dba",
+    "source": "huggingface"
+  },
+  "nodes": {
+    "copied": 0,
+    "failed": 0,
+    "required": 15,
+    "results": [
+      {
+        "availableBytes": 27634179231744,
+        "fileCount": 52,
+        "manifestDigest": "sha256:47c93af2b64f6ad8ff2b48eb02dbfc80183b8c223067d4599997c098ae42ddae",
+        "node": "ip-100-64-128-119",
+        "path": "/raid/scratch/benchops-oleizerov/models/MiniMax-M3-MXFP8-c5454eb03678",
+        "requiredBytes": 443776005285,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27687694983168,
+        "fileCount": 52,
+        "manifestDigest": "sha256:47c93af2b64f6ad8ff2b48eb02dbfc80183b8c223067d4599997c098ae42ddae",
+        "node": "ip-100-64-134-190",
+        "path": "/raid/scratch/benchops-oleizerov/models/MiniMax-M3-MXFP8-c5454eb03678",
+        "requiredBytes": 443776005285,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27672158404608,
+        "fileCount": 52,
+        "manifestDigest": "sha256:47c93af2b64f6ad8ff2b48eb02dbfc80183b8c223067d4599997c098ae42ddae",
+        "node": "ip-100-64-143-5",
+        "path": "/raid/scratch/benchops-oleizerov/models/MiniMax-M3-MXFP8-c5454eb03678",
+        "requiredBytes": 443776005285,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27467993628672,
+        "fileCount": 52,
+        "manifestDigest": "sha256:47c93af2b64f6ad8ff2b48eb02dbfc80183b8c223067d4599997c098ae42ddae",
+        "node": "ip-100-64-174-183",
+        "path": "/raid/scratch/benchops-oleizerov/models/MiniMax-M3-MXFP8-c5454eb03678",
+        "requiredBytes": 443776005285,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27677030404096,
+        "fileCount": 52,
+        "manifestDigest": "sha256:47c93af2b64f6ad8ff2b48eb02dbfc80183b8c223067d4599997c098ae42ddae",
+        "node": "ip-100-64-175-14",
+        "path": "/raid/scratch/benchops-oleizerov/models/MiniMax-M3-MXFP8-c5454eb03678",
+        "requiredBytes": 443776005285,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27686392848384,
+        "fileCount": 52,
+        "manifestDigest": "sha256:47c93af2b64f6ad8ff2b48eb02dbfc80183b8c223067d4599997c098ae42ddae",
+        "node": "ip-100-64-194-51",
+        "path": "/raid/scratch/benchops-oleizerov/models/MiniMax-M3-MXFP8-c5454eb03678",
+        "requiredBytes": 443776005285,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27686455209984,
+        "fileCount": 52,
+        "manifestDigest": "sha256:47c93af2b64f6ad8ff2b48eb02dbfc80183b8c223067d4599997c098ae42ddae",
+        "node": "ip-100-64-196-11",
+        "path": "/raid/scratch/benchops-oleizerov/models/MiniMax-M3-MXFP8-c5454eb03678",
+        "requiredBytes": 443776005285,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27467835838464,
+        "fileCount": 52,
+        "manifestDigest": "sha256:47c93af2b64f6ad8ff2b48eb02dbfc80183b8c223067d4599997c098ae42ddae",
+        "node": "ip-100-64-196-30",
+        "path": "/raid/scratch/benchops-oleizerov/models/MiniMax-M3-MXFP8-c5454eb03678",
+        "requiredBytes": 443776005285,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27472667140096,
+        "fileCount": 52,
+        "manifestDigest": "sha256:47c93af2b64f6ad8ff2b48eb02dbfc80183b8c223067d4599997c098ae42ddae",
+        "node": "ip-100-64-197-14",
+        "path": "/raid/scratch/benchops-oleizerov/models/MiniMax-M3-MXFP8-c5454eb03678",
+        "requiredBytes": 443776005285,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27686495252480,
+        "fileCount": 52,
+        "manifestDigest": "sha256:47c93af2b64f6ad8ff2b48eb02dbfc80183b8c223067d4599997c098ae42ddae",
+        "node": "ip-100-64-198-138",
+        "path": "/raid/scratch/benchops-oleizerov/models/MiniMax-M3-MXFP8-c5454eb03678",
+        "requiredBytes": 443776005285,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27687717044224,
+        "fileCount": 52,
+        "manifestDigest": "sha256:47c93af2b64f6ad8ff2b48eb02dbfc80183b8c223067d4599997c098ae42ddae",
+        "node": "ip-100-64-210-114",
+        "path": "/raid/scratch/benchops-oleizerov/models/MiniMax-M3-MXFP8-c5454eb03678",
+        "requiredBytes": 443776005285,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27691186782208,
+        "fileCount": 52,
+        "manifestDigest": "sha256:47c93af2b64f6ad8ff2b48eb02dbfc80183b8c223067d4599997c098ae42ddae",
+        "node": "ip-100-64-211-68",
+        "path": "/raid/scratch/benchops-oleizerov/models/MiniMax-M3-MXFP8-c5454eb03678",
+        "requiredBytes": 443776005285,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27686392922112,
+        "fileCount": 52,
+        "manifestDigest": "sha256:47c93af2b64f6ad8ff2b48eb02dbfc80183b8c223067d4599997c098ae42ddae",
+        "node": "ip-100-64-217-51",
+        "path": "/raid/scratch/benchops-oleizerov/models/MiniMax-M3-MXFP8-c5454eb03678",
+        "requiredBytes": 443776005285,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27472605863936,
+        "fileCount": 52,
+        "manifestDigest": "sha256:47c93af2b64f6ad8ff2b48eb02dbfc80183b8c223067d4599997c098ae42ddae",
+        "node": "ip-100-64-226-34",
+        "path": "/raid/scratch/benchops-oleizerov/models/MiniMax-M3-MXFP8-c5454eb03678",
+        "requiredBytes": 443776005285,
+        "state": "reused"
+      },
+      {
+        "availableBytes": 27687760744448,
+        "fileCount": 52,
+        "manifestDigest": "sha256:47c93af2b64f6ad8ff2b48eb02dbfc80183b8c223067d4599997c098ae42ddae",
+        "node": "ip-100-64-227-57",
+        "path": "/raid/scratch/benchops-oleizerov/models/MiniMax-M3-MXFP8-c5454eb03678",
+        "requiredBytes": 443776005285,
+        "state": "reused"
+      }
+    ],
+    "reused": 15,
+    "verified": 15
+  },
+  "recordPath": "/Users/oleizerov/Documents/code/ai-cluster-benchmarking-qwen-stage/.benchops/model-stages/minimax-m3-mxfp8-lepton-gb300/20260814T171846922839Z",
+  "requiredModelBytes": 443776005285,
+  "schemaVersion": 1,
+  "sharedCopy": {
+    "availableBytes": 2110299570176,
+    "fileCount": 52,
+    "manifestDigest": "sha256:47c93af2b64f6ad8ff2b48eb02dbfc80183b8c223067d4599997c098ae42ddae",
+    "node": "ip-100-64-168-237",
+    "path": "/scratch/fsw/users/oleizerov/models/MiniMax-M3-MXFP8-c5454eb03678",
+    "requiredBytes": 443776005285,
+    "state": "valid"
+  },
+  "sharedPath": "/scratch/fsw/users/oleizerov/models/MiniMax-M3-MXFP8-c5454eb03678",
+  "state": "ready",
+  "transfer": {
+    "concurrency": 4,
+    "estimatedBytes": 0,
+    "nodesRequired": []
+  },
+  "verification": {
+    "mode": "full-sha256",
+    "requireAllTargets": true
+  }
+}
