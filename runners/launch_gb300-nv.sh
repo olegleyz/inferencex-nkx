@@ -470,6 +470,35 @@ cat srtslurm.yaml
 echo "Running make setup..."
 make setup ARCH=aarch64
 
+# Older reviewed srt-slurm revisions do not materialize a compute-architecture
+# uv binary during `make setup`. When a cross-architecture target declares an
+# immutable uv identity, add it under the srt-slurm checkout and put that path
+# first in the submitted Slurm environment. The host srtctl entrypoint remains
+# the absolute venv path captured above.
+if [[ -n "${SRT_SLURM_COMPUTE_UV_VERSION:-}" || -n "${SRT_SLURM_COMPUTE_UV_SHA256:-}" ]]; then
+    if [[ -z "${SRT_SLURM_COMPUTE_UV_VERSION:-}" || ! "${SRT_SLURM_COMPUTE_UV_SHA256:-}" =~ ^[0-9a-f]{64}$ ]]; then
+        echo "Compute uv requires a version and lowercase SHA-256 digest" >&2
+        exit 1
+    fi
+    COMPUTE_UV_DIR="${SRT_REPO_DIR}/bin"
+    COMPUTE_UV_BIN="${COMPUTE_UV_DIR}/uv"
+    COMPUTE_UV_TMP=$(mktemp -d)
+    COMPUTE_UV_ARCHIVE="${COMPUTE_UV_TMP}/uv.tar.gz"
+    curl -LsSf \
+        "https://github.com/astral-sh/uv/releases/download/${SRT_SLURM_COMPUTE_UV_VERSION}/uv-aarch64-unknown-linux-gnu.tar.gz" \
+        -o "$COMPUTE_UV_ARCHIVE"
+    echo "${SRT_SLURM_COMPUTE_UV_SHA256}  ${COMPUTE_UV_ARCHIVE}" | sha256sum --check --status
+    mkdir -p "$COMPUTE_UV_DIR"
+    tar -xzf "$COMPUTE_UV_ARCHIVE" --strip-components=1 -C "$COMPUTE_UV_DIR"
+    rm -rf "$COMPUTE_UV_TMP"
+    if ! file "$COMPUTE_UV_BIN" | grep -q 'ARM aarch64'; then
+        echo "Compute uv is not an Arm64 executable: $COMPUTE_UV_BIN" >&2
+        exit 1
+    fi
+    chmod +x "$COMPUTE_UV_BIN"
+    echo "Prepared checksum-pinned Arm64 uv: version=${SRT_SLURM_COMPUTE_UV_VERSION} sha256=${SRT_SLURM_COMPUTE_UV_SHA256}"
+fi
+
 # Export eval-related env vars for srt-slurm post-benchmark eval
 export INFMAX_WORKSPACE="$GITHUB_WORKSPACE"
 
@@ -622,6 +651,9 @@ fi
 # uv on the compute node finds the x86_64 Python first and fails with ENOEXEC.
 # Do this only after host-side recipe generation, which uses the venv's python.
 deactivate
+if [[ -n "${COMPUTE_UV_BIN:-}" ]]; then
+    export PATH="${COMPUTE_UV_DIR}:$PATH"
+fi
 hash -r
 
 SRTCTL_APPLY_ARGS=(

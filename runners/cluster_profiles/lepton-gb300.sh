@@ -61,6 +61,11 @@ case "${MODEL_PREFIX:-}-${PRECISION:-}-${FRAMEWORK:-}" in
             # BenchOps MiniMax jobs, including Slurm job 484.
             export IMAGE_SQUASH_SHA256="1ac422ddf87efdb3d9902e254dd7d56cc9ce9d152b59f2b7e9c0716595eab481"
             export SRT_SLURM_MINIMAX_M3_STANDARD_REF="deb1dfd9934398664f92d194169c183e009da83b"
+            # This older srt-slurm revision reuses the first uv on PATH in its
+            # Arm64 Slurm orchestrator. Pin a compute-architecture binary so it
+            # cannot inherit the x86_64 GitHub runner installation.
+            export SRT_SLURM_COMPUTE_UV_VERSION="0.12.4"
+            export SRT_SLURM_COMPUTE_UV_SHA256="49d881b3403187e1f1789720881e77e4251ad4259d86c4844862657d2a35d13f"
         fi
         ;;
 esac
