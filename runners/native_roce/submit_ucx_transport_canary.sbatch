@@ -16,5 +16,10 @@ export INFERENCEX_UCX_CANARY_IMAGE="${INFERENCEX_UCX_CANARY_IMAGE:-/scratch/fsw/
 export INFERENCEX_UCX_CANARY_LOG_DIR="${INFERENCEX_UCX_CANARY_LOG_DIR:-/scratch/fsw/users/oleizerov/.inferencex/runtime-canaries/minimax-ucx-1.22.0-${SLURM_JOB_ID}}"
 export SLURM_EXPORT_ENV=ALL
 
-script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-exec bash "${script_dir}/run_ucx_transport_canary.sh"
+readonly canary_script="/scratch/fsw/users/oleizerov/.inferencex/sources/a47610748/runners/native_roce/run_ucx_transport_canary.sh"
+readonly canary_script_sha256="9528f292c52e184be0053b2306f53137328288ebbcb825f107b10fb9a16c4f11"
+[[ "$(sha256sum "$canary_script" | awk '{print $1}')" == "$canary_script_sha256" ]] || {
+    echo "native-RoCE canary script checksum mismatch: $canary_script" >&2
+    exit 1
+}
+exec bash "$canary_script"
