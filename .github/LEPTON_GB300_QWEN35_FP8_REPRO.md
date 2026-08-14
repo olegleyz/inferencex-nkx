@@ -33,11 +33,16 @@ generated Slurm script, environment artifact, and logs.
 | --- | --- | --- | --- |
 | `1p1d-tp4-tp4.yaml` | 1 prefill TP4 + 1 decode TP4 | 1, 2, 4, 8, 16, 32, 64, 128 | 2 / 8 |
 | `4p1d-dep4-dep16.yaml` | 4 prefill DEP4 + 1 decode DEP16 | 1024 | 8 / 32 |
-| `8p1d-dep4-dep16.yaml` | 8 prefill DEP4 + 1 decode DEP16 | 2048, 4096 | 12 / 48 |
+| `8p1d-dep4-dep16.yaml` | 8 prefill DEP4 + 1 decode DEP16 | 2048, 4096 | 13 / 52 allocated; 12 / 48 serving |
 
 The normal generator retains InferenceX's native throughput and evaluation
 split. Readiness alone selects the existing 1P1D recipe at concurrency 1,
 disables evaluations, and sends one formal 8K/1K request.
+
+The 8P recipe also sets upstream `infra.etcd_nats_dedicated_node: true`.
+Consequently srt-slurm allocates one additional four-GPU worker for the
+control plane even though only 12 nodes / 48 GPUs serve the model. This is
+part of the checked-in recipe, not a Lepton adapter input.
 
 ## Explicit Lepton inputs
 
@@ -65,10 +70,11 @@ defines `targets.gpuNodes: ALL` as every active GPU worker, while the
 InferenceX preflight independently rejects an active partition worker missing
 from the receipt.
 
-The receipt minimum is 12 workers because the largest native Qwen topology is
-12 nodes. The actual receipt must still cover every active worker at dispatch
-time. A drained or reserved node becoming active therefore blocks launch until
-it has also been staged and verified.
+The largest native Qwen topology allocates 13 workers: 8 prefill, 4 decode,
+and the recipe's dedicated etcd/NATS worker. The actual receipt must still
+cover every active worker at dispatch time. A drained or reserved node
+becoming active therefore blocks launch until it has also been staged and
+verified. The receipt used here covered all 15 active workers.
 
 ## Prior Lepton reference ranges
 
@@ -146,3 +152,55 @@ aggregated result, server logs, model-stage provenance, runtime provenance,
 and run statistics. The runtime provenance includes `effective-recipe.yaml`,
 `config.yaml`, `sbatch_script.sh`, `launcher-environment.txt`,
 `inferencex-commit.txt`, `srt-slurm-commit.txt`, and `srtslurm.yaml`.
+
+## Native matrix execution
+
+The full, untrimmed native matrix was dispatched as GitHub Actions run
+[`31785209597`](https://github.com/olegleyz/inferencex-nkx/actions/runs/31785209597)
+from commit `909a76500690fd1145e4d8b86e2f4eb461860e14`. The generator produced the
+three topology rows above and InferenceX's normal six-job split: one throughput
+and one eval-only job for each topology.
+
+| Slice | GitHub job | Slurm job | Status and evidence |
+| --- | --- | --- | --- |
+| 1P1D TP4/TP4 eval | `94719557315` | `1097` | Success. GSM8K completed all 1,319 requests; strict exact match was `0.969674` and flexible exact match was `0.963609`. The workflow's score validation, server-log upload, resolved-configuration upload, eval-artifact upload, and post-run cleanup all passed. |
+| 4P1D DEP4/DEP16 eval | `94719557371` | `1101` | Success. GSM8K completed all 1,319 requests at the native eval concurrency `1024`; strict exact match was `0.9682` and flexible exact match was `0.9568`. Score validation and all native artifact uploads passed. |
+| 4P1D DEP4/DEP16 throughput | `94719557427` | `1105` | Success. All 20,480 requests completed at `34,264.61` output tokens/s, inside the prior `34,246.44`–`34,281.87` range. Mean TTFT was `8.224 s`, mean TPOT was `20.12 ms`, and mean end-to-end latency was `26.761 s`; result processing and all native artifact uploads passed. |
+| 1P1D TP4/TP4 throughput | `94719557460` | `1109` | Success. All eight native concurrency points completed, result processing passed, and the durable result artifact is `9215756001`. |
+| 8P1D DEP4/DEP16 throughput | `94719557478` | `1113` | Success on 13 allocated workers, including the recipe's dedicated etcd/NATS worker. Readiness passed with all eight prefill workers and the four-node DEP16 decode group registered. Concurrency 2048 completed 20,480 requests at `62,596.39` output tokens/s, 0.25% below the prior range minimum. Concurrency 4096 completed 40,960 requests at `67,184.65` output tokens/s, 0.55% above the prior range maximum. Result processing and all native uploads passed. |
+| 8P1D DEP4/DEP16 eval | `94719557432` | `1117` | Success. GSM8K completed all 1,319 requests at the native eval concurrency `4096`; strict exact match was `0.9674` and flexible exact match was `0.9583`. Score validation, result aggregation, all native artifact uploads, and post-run cleanup passed. |
+
+The 1P1D throughput results were:
+
+| Concurrency | Requests | Output tokens/s | Comparison with prior Lepton range |
+| ---: | ---: | ---: | --- |
+| 1 | 10 | 188.00 | Inside `184.43`–`189.27` |
+| 2 | 20 | 356.87 | Inside `353.75`–`360.44` |
+| 4 | 40 | 615.53 | Inside `602.40`–`617.92` |
+| 8 | 80 | 1,027.25 | Inside `1,027.18`–`1,038.32` |
+| 16 | 160 | 1,683.42 | 0.89% above prior maximum `1,668.59` |
+| 32 | 320 | 2,604.17 | 0.71% above prior maximum `2,585.93` |
+| 64 | 640 | 4,072.85 | 0.34% above prior maximum `4,059.10` |
+| 128 | 1,280 | 6,266.63 | 0.74% above prior maximum `6,220.42` |
+
+The 1P1D eval artifacts are preserved under native Actions artifact
+`eval_qwen3.5_8k1k_lepton-gb300_..._gb300l-nv_00` (artifact ID
+`9213800544`), together with `multinode_server_logs_...` and both model-stage
+provenance artifacts. The eval artifact contains the aggregate result JSON,
+the complete per-sample GSM8K JSONL, and `meta_env.json`.
+
+The 8P1D throughput result is preserved in native benchmark artifact
+`9216798595`; its server logs are in artifact `9216800613`, and the runtime
+model-stage provenance is in artifact `9216800926`. The workflow also uploaded
+the processed `results_bmk` artifact `9216805262` and the original model-stage
+receipt artifact.
+
+The 8P1D eval result and complete per-sample GSM8K JSONL are preserved in
+native eval artifact `9217145077`; its server logs are in artifact
+`9217144128`, and the runtime model-stage provenance is in artifact
+`9217144420`. The final workflow-wide aggregate is artifact `9217149945`, and
+the run-statistics artifact is `9217156110`.
+
+The workflow completed successfully with all six native matrix jobs green at
+the exact dispatched commit. No interactive node change, recipe rewrite, or
+benchmark-time model copy was used.
