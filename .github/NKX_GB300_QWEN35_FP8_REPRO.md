@@ -90,7 +90,9 @@ Set the same target and receipt, with `readiness-only=false`. Do not use
 | Shared download | initial stage record `20260814T024222956384Z` | The Teleport client stream expired after download, but the remote process continued and atomically published all 107 files (406,198,638,888 bytes). No incomplete directory was published. |
 | Node-local stage | Slurm `2439` | Ready on 16/16 required NKX GPU workers; 16 copied, 16 verified, zero failed. |
 | Independent full audit | Slurm `2440` | Ready on 16/16; every existing copy reused only after full SHA-256 verification against manifest `sha256:3bc4f54f36992c01270313ae4a6b75cadfec4d58f6874282acbd6ada24ab7502`. |
+| Initial readiness | GitHub Actions `31769246166`, Slurm `2444` | Serving succeeded, including one 8K/1K request, but post-processing failed because the one-request result had `std_tpot_ms=0` and `process_result.py` inverted every TPOT statistic. Native logs and the raw SA-Bench result were preserved. |
+| Result-processing fix | commit `9ca0c63f0dfcc1fdb29f32c665c258913fd61291` | Zero-valued TPOT statistics remain recorded but are not inverted into undefined interactivity values. All 32 result-processing tests passed, and the exact captured readiness JSON replayed successfully. |
+| Green readiness | GitHub Actions `31770432333`, job `94675083957`, Slurm `2448` | Success at the exact fix commit. Receipt validation, original 1P TP4 + 1D TP4 recipe, model initialization, worker registration, one 8K/1K request, result processing, aggregation, success-rate calculation, and native artifact upload all passed. Artifacts: result `9208215437`, server logs `9208215749`, resolved srt-slurm configuration `9208216074`, and aggregated result `9208220165`. |
 
-Readiness and full-run GitHub Actions IDs, benchmark Slurm job IDs,
-conclusions, artifact links, and performance comparisons are added here after
-execution.
+Full-run GitHub Actions IDs, benchmark Slurm job IDs, conclusions, artifact
+links, and performance comparisons are added here after execution.
