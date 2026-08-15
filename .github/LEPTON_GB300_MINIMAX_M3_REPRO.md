@@ -97,3 +97,59 @@ For every run retain the exact fork commit, generated matrix, effective recipe,
 generated Slurm script, launcher environment, both model receipts and shared
 manifests where applicable, image identity, server logs, benchmark JSON, and
 native aggregate artifact.
+
+## August 15, 2026 completion record
+
+The standard matrix completed all nine jobs (11 concurrency data points) in
+GitHub Actions run `31841679846`. The EAGLE3 matrix completed all 11 recipe
+points using the original matrix run plus individually isolated recoveries:
+
+| Evidence | Purpose | Outcome |
+| --- | --- | --- |
+| GHA `31858721822`, Slurm `1219` | Native EAGLE3 readiness | Passed |
+| GHA `31859994530` | Original 11-point EAGLE3 matrix | Five valid points retained |
+| GHA `31865382304` | TP4 c1 recovery | Passed |
+| GHA `31865383218` | TP8 c8 recovery | Passed |
+| GHA `31865384083` | 3P c256 recovery | Passed |
+| GHA `31865386256` | 4P c2048 recovery | Passed |
+| GHA `31865387194` | 6P c2048 recovery | Passed |
+| GHA `31876477928`, Slurm `1320` | 4P1D DEP2/DEP8 c1024 canonical recovery | Passed |
+
+All canonical runs use fork commit
+`bfe57ef8094c1c6f0efcf182520b69de1d5ce29a` or an earlier ancestor with the
+same frozen recipe/runtime contract. GitHub Actions preserves the effective
+recipe, generated Slurm script, fingerprints, server logs, benchmark JSON,
+and native aggregate result under each run.
+
+The final c1024 recovery completed all 10,240 measured requests in 397.22
+seconds. It reported 23,761.43 output tokens/s, 25.78 requests/s, 26,410.63 ms
+mean TTFT, and 12.08 ms mean TPOT. The matching upstream result was 23,674.58
+output tokens/s, so the Lepton result is 0.37% higher. This comparison is for
+the unchanged canonical run; the diagnostic probe below is not a published
+matrix result.
+
+### c1024 failure investigation
+
+An earlier exact c1024 attempt, GHA `31870602301` / Slurm `1306`, initialized
+and registered every worker but failed during the 2,048-request warmup. The
+first fatal signature was a vLLM CUTLASS MSA assertion on decode DP0:
+`assert query_fp8 is not None`. Later RPC, TCPStore, and lease messages were
+cascading symptoms. Native RoCE/NIXL did not fail in that attempt.
+
+Source-controlled canaries (Slurm `1299` and `1301`) passed the relevant
+native UCX/CUDA registration shape, including on the previously affected
+worker. A focused warmup-load probe was therefore added at commit
+`bfe57ef8094c1c6f0efcf182520b69de1d5ce29a`. Its validator permits only the
+reviewed Lepton EAGLE3 c1024 point. The probe preserves concurrency, topology,
+models, image, native transport, and the original two-times warmup, while
+reducing only the subsequent measured request multiplier from ten to one and
+labeling the artifacts as diagnostic.
+
+GHA `31873865150` / Slurm `1315` passed the exact 2,048-request warmup and its
+1,024-request measurement without the assertion. That result justified one
+unchanged canonical retry. GHA `31876477928` / Slurm `1320` then passed the
+same warmup and the full 10,240-request measurement. The evidence classifies
+the assertion as a nondeterministic vLLM runtime failure rather than a recipe,
+model-content, or persistent RoCE configuration defect; no runtime setting,
+transport fallback, model file, or cluster state was changed to obtain the
+canonical success.
