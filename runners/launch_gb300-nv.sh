@@ -140,10 +140,18 @@ verify_model_stage_receipt_all_nodes() {
     if [[ "${INFERENCEX_REQUIRE_PARTITION_RECEIPT_COVERAGE:-0}" == "1" ]]; then
         mapfile -t active_partition_nodes < <(
             sinfo --noheader --Node --partition="$SLURM_PARTITION" --format='%N|%T' |
-                awk -F'|' '$2 ~ /^(idle|allocated|mixed|completing)$/ {print $1}' |
+                # Slurm appends status flags to the base state during short
+                # allocation/completion transitions (for example,
+                # "allocated+"). Match the eligible base-state prefix while
+                # continuing to reject reserved, drained, and down workers.
+                awk -F'|' '$2 ~ /^(idle|allocated|mixed|completing)/ {print $1}' |
                 sort -u
         )
-        test "${#active_partition_nodes[@]}" -gt 0
+        if ! test "${#active_partition_nodes[@]}" -gt 0; then
+            echo "No benchmark-eligible workers found in partition $SLURM_PARTITION" >&2
+            sinfo --noheader --Node --partition="$SLURM_PARTITION" --format='%N|%T' >&2
+            exit 1
+        fi
         missing_nodes=$(
             comm -23 \
                 <(printf '%s\n' "${active_partition_nodes[@]}" | sort -u) \
