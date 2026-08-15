@@ -11,7 +11,7 @@ partition, storage, model receipt, or RoCE device mapping.
 | --- | --- |
 | Target | `lepton-gb300` |
 | GitHub runner label | `gb300l-nv` |
-| Registered runner | `gb300l-nv_00` |
+| Registered runners | `gb300l-nv_00`, `gb300l-nv_01`, `gb300l-nv_02` |
 | Slurm cluster | `nkx-slinky-dev-02` |
 | Partition/account | `batch` / `nvidia` |
 | CPUs per task | 140 |
@@ -22,16 +22,26 @@ partition, storage, model receipt, or RoCE device mapping.
 
 The runner uses Actions runner `2.336.0`, Linux x64 archive SHA-256
 `04cf0be1aff4c3ec3554466c39124ca250e3effd8873bb7e8d68535aa9505d5d`.
-Its registration and work directory are under the persistent Lepton user home:
+Each registration and work directory is isolated under the persistent Lepton
+user home. The original `_00` listener retains its legacy directory so adding
+the pool does not disturb existing jobs:
 
 ```text
-/scratch/fsw/users/oleizerov/.github-actions/gb300l-nv
+/scratch/fsw/users/oleizerov/.github-actions/gb300l-nv     # gb300l-nv_00
+/scratch/fsw/users/oleizerov/.github-actions/gb300l-nv_01  # gb300l-nv_01
+/scratch/fsw/users/oleizerov/.github-actions/gb300l-nv_02  # gb300l-nv_02
 ```
 
-The Lepton `LoginSet` starts and gracefully stops this non-root runner through
-the source-controlled `start_github_actions_runner.sh` and
-`stop_github_actions_runner.sh` helpers. The runner has Lepton-specific labels
-only; it does not carry `gb300-nv` or `cluster:gb300-nkx`.
+The Lepton `LoginSet` starts and gracefully stops all three non-root listeners
+through the source-controlled pool helpers. Each listener has the same
+Lepton-specific routing labels and a unique runner name, work directory, PID,
+log, and Slurm job name. None carries `gb300-nv` or `cluster:gb300-nkx`.
+
+This matches upstream InferenceX's GB300 scheduling model: GitHub expands the
+matrix into independent jobs, one listener submits one `srt-slurm` job and
+waits for it, and Slurm decides which submitted jobs can run concurrently.
+Three listeners therefore permit up to three matrix points to be submitted at
+once; they do not bypass Slurm placement or capacity decisions.
 
 The live `nkx-slinky-dev-02-slurm-login-default` `LoginSet` has the following
 idempotent lifecycle contract. The user fallback is necessary because the
@@ -62,11 +72,19 @@ preStop:
         || true; exit 0
 ```
 
+Those legacy hook paths are persistent symbolic links to
+`../start-gb300l-runner-pool.sh` and `../stop-gb300l-runner-pool.sh`. This
+preserves the existing `LoginSet` specification and avoids a login-pod rollout
+when the pool size changes. The generic single-listener helpers live beside
+the pool scripts in `.github-actions/` and receive each isolated runner root
+through `ACTIONS_RUNNER_ROOT`.
+
 Runner registration is deliberately separate from pod startup because GitHub
 registration tokens are short-lived. Install the pinned archive into the
 persistent directory, verify the SHA-256 above, obtain a fresh repository
-registration token, and configure the runner once with name `gb300l-nv_00`,
-work directory `_work`, and labels
+registration token, and configure each runner root once with its corresponding
+name (`gb300l-nv_00`, `gb300l-nv_01`, or `gb300l-nv_02`), work directory
+`_work`, and labels
 `slurm,gb300l-nv,cluster:gb300-lepton,gb300l`. Never store the registration
 token in Git, the `LoginSet`, or the runner scripts.
 
