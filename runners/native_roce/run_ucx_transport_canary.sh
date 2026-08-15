@@ -7,6 +7,22 @@ readonly log_dir="${INFERENCEX_UCX_CANARY_LOG_DIR:?INFERENCEX_UCX_CANARY_LOG_DIR
 readonly perftest="$overlay/bin/ucx_perftest"
 readonly library_path="$overlay/lib:/usr/local/lib/python3.12/dist-packages/.nixl_cu13.mesonpy.libs"
 readonly module_path="$overlay/lib/ucx"
+readonly cross_host_size="${INFERENCEX_UCX_CANARY_CROSS_HOST_SIZE:-1048576}"
+readonly iterations="${INFERENCEX_UCX_CANARY_ITERATIONS:-500}"
+readonly warmup_iterations="${INFERENCEX_UCX_CANARY_WARMUP_ITERATIONS:-50}"
+
+[[ "$cross_host_size" =~ ^[1-9][0-9]*$ ]] || {
+    echo "INFERENCEX_UCX_CANARY_CROSS_HOST_SIZE must be a positive integer" >&2
+    exit 2
+}
+[[ "$iterations" =~ ^[1-9][0-9]*$ ]] || {
+    echo "INFERENCEX_UCX_CANARY_ITERATIONS must be a positive integer" >&2
+    exit 2
+}
+[[ "$warmup_iterations" =~ ^[0-9]+$ ]] || {
+    echo "INFERENCEX_UCX_CANARY_WARMUP_ITERATIONS must be a non-negative integer" >&2
+    exit 2
+}
 
 mapfile -t nodes < <(scontrol show hostnames "$SLURM_JOB_NODELIST")
 [[ ${#nodes[@]} -eq 2 ]] || {
@@ -30,7 +46,7 @@ run_pair() {
         'export LD_LIBRARY_PATH=%q UCX_MODULE_DIR=%q UCX_TLS=%q UCX_LOG_LEVEL=info UCX_PROTO_INFO=y;' \
         "$library_path" "$module_path" "$transports"
     srun "${common[@]}" --nodelist="$server_node" \
-        bash -lc "$prefix timeout 180s '$perftest' -t tag_bw -m cuda -s '$size' -n 500 -w 50 -p '$port' -v" \
+        bash -lc "$prefix timeout 180s '$perftest' -t tag_bw -m cuda -s '$size' -n '$iterations' -w '$warmup_iterations' -p '$port' -v" \
         >"$server_log" 2>&1 &
     local server_pid=$!
     sleep 3
@@ -40,7 +56,7 @@ run_pair() {
         "$library_path" "$module_path" "$transports"
     local client_rc=0 server_rc=0
     timeout 190s srun "${common[@]}" --nodelist="$client_node" \
-        bash -lc "$prefix timeout 180s '$perftest' '$server_node' -t tag_bw -m cuda -s '$size' -n 500 -w 50 -p '$port' -v" \
+        bash -lc "$prefix timeout 180s '$perftest' '$server_node' -t tag_bw -m cuda -s '$size' -n '$iterations' -w '$warmup_iterations' -p '$port' -v" \
         >"$client_log" 2>&1 || client_rc=$?
     wait "$server_pid" || server_rc=$?
     [[ $client_rc -eq 0 && $server_rc -eq 0 ]] || {
@@ -69,7 +85,7 @@ done
 pair_pids=()
 for gpu in 0 1 2 3; do
     run_pair "cross-host-$gpu" "${nodes[0]}" "${nodes[1]}" "$((15337 + gpu))" \
-        'rc,cuda' 1048576 &
+        'rc,cuda' "$cross_host_size" &
     pair_pids+=("$!")
 done
 for pid in "${pair_pids[@]}"; do
@@ -78,6 +94,7 @@ done
 
 {
     echo "nodes=${nodes[*]}"
+    echo "cross_host_size=$cross_host_size iterations=$iterations warmup_iterations=$warmup_iterations"
     grep -hE 'Library version:|UCX  INFO.*Version|cuda_ipc|rc_mlx5|FINAL' \
         "$log_dir"/*.log || true
 } >"$log_dir/summary.log"
