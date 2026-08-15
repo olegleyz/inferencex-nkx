@@ -415,6 +415,44 @@ class TargetMatrixTests(unittest.TestCase):
                 "nkx-gb300", [row], readiness_only=True
             )
 
+    def test_minimax_m3_warmup_load_probe_accepts_only_lepton_c1024(self) -> None:
+        row = self._minimax_m3_row(
+            "4p1d-dep2-dep8-eagle3-c1024-8k1k.yaml"
+        )
+        row["conc"] = [1024]
+        self.assertEqual(
+            validate_cluster_target_matrix.validate(
+                "lepton-gb300", [row], warmup_load_probe=True
+            ),
+            1,
+        )
+        with self.assertRaisesRegex(RuntimeError, "reviewed Lepton"):
+            validate_cluster_target_matrix.validate(
+                "nkx-gb300", [row], warmup_load_probe=True
+            )
+
+        wrong = self._minimax_m3_row(
+            "4p1d-dep2-dep8-eagle3-c2048-8k1k.yaml"
+        )
+        wrong["conc"] = [2048]
+        with self.assertRaisesRegex(RuntimeError, "unreviewed or duplicate"):
+            validate_cluster_target_matrix.validate(
+                "lepton-gb300", [wrong], warmup_load_probe=True
+            )
+
+    def test_probe_modes_are_mutually_exclusive(self) -> None:
+        row = self._minimax_m3_row(
+            "4p1d-dep2-dep8-eagle3-c1024-8k1k.yaml"
+        )
+        row["conc"] = [1024]
+        with self.assertRaisesRegex(RuntimeError, "mutually exclusive"):
+            validate_cluster_target_matrix.validate(
+                "lepton-gb300",
+                [row],
+                readiness_only=True,
+                warmup_load_probe=True,
+            )
+
 
 class ReceiptTests(unittest.TestCase):
     def test_target_receipt_and_manifest_are_bound_together(self) -> None:

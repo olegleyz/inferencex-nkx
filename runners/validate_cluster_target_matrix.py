@@ -161,8 +161,16 @@ def _recipe(row: dict[str, Any]) -> str:
     return matches[0]
 
 
-def validate(target: str, matrix: Any, *, readiness_only: bool = False) -> int:
+def validate(
+    target: str,
+    matrix: Any,
+    *,
+    readiness_only: bool = False,
+    warmup_load_probe: bool = False,
+) -> int:
     """Validate a generated matrix and return its number of entries."""
+    if readiness_only and warmup_load_probe:
+        raise RuntimeError("readiness and warmup-load probes are mutually exclusive")
     if target not in load_targets():
         raise RuntimeError(f"unsupported target cluster: {target}")
     if not isinstance(matrix, list) or not matrix:
@@ -211,6 +219,18 @@ def validate(target: str, matrix: Any, *, readiness_only: bool = False) -> int:
             "recipes": readiness_recipes[model],
         }
         recipes = contract["recipes"]
+    if warmup_load_probe:
+        probe_recipe = "4p1d-dep2-dep8-eagle3-c1024-8k1k.yaml"
+        if (
+            target != "lepton-gb300"
+            or contract is not MINIMAX_M3_EAGLE3_CONTRACT
+            or len(matrix) != 1
+        ):
+            raise RuntimeError(
+                "warmup-load probe must be the reviewed Lepton MiniMax EAGLE3 point"
+            )
+        contract = {**contract, "recipes": {probe_recipe}}
+        recipes = contract["recipes"]
     if len(matrix) > len(recipes):
         raise RuntimeError("target-specific matrix exceeds the reviewed recipe set")
 
@@ -252,9 +272,13 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--target", required=True)
     parser.add_argument("--readiness-only", action="store_true")
+    parser.add_argument("--warmup-load-probe", action="store_true")
     args = parser.parse_args()
     count = validate(
-        args.target, json.load(sys.stdin), readiness_only=args.readiness_only
+        args.target,
+        json.load(sys.stdin),
+        readiness_only=args.readiness_only,
+        warmup_load_probe=args.warmup_load_probe,
     )
     print(f"validated target={args.target} entries={count}")
 

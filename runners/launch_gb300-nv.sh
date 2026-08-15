@@ -661,6 +661,13 @@ if os.environ.get("INFERENCEX_READINESS_ONLY") == "1":
     # the focused gate reaches its single formal request.
     benchmark["num_warmup_mult"] = 1
 
+if os.environ.get("INFERENCEX_WARMUP_LOAD_PROBE") == "1":
+    # Preserve the reviewed recipe's concurrency and warm-up multiplier so
+    # this probe exercises the exact load that exposed the EAGLE3 MSA crash.
+    # Reduce only the subsequent measured workload; this artifact is
+    # diagnostic and is never classified as a canonical benchmark result.
+    document.setdefault("benchmark", {})["num_prompts_mult"] = 1
+
 path.write_text(yaml.safe_dump(document, sort_keys=False))
 PY
 fi

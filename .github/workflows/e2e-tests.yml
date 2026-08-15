@@ -103,6 +103,11 @@ on:
                 required: false
                 type: boolean
                 default: false
+            warmup-load-probe:
+                description: "Preserve reviewed warmup load and reduce only measured prompts"
+                required: false
+                type: boolean
+                default: false
     workflow_call:
         inputs:
             generate-cli-command:
@@ -140,6 +145,11 @@ on:
                 default: ""
             readiness-only:
                 description: "Use one formal request after native serving readiness"
+                required: false
+                type: boolean
+                default: false
+            warmup-load-probe:
+                description: "Preserve reviewed warmup load and reduce only measured prompts"
                 required: false
                 type: boolean
                 default: false
@@ -257,6 +267,7 @@ jobs:
                   EVALS_ONLY: ${{ inputs.evals-only }}
                   TARGET_CLUSTER: ${{ steps.resolve-target.outputs.target-cluster }}
                   READINESS_ONLY: ${{ inputs.readiness-only }}
+                  WARMUP_LOAD_PROBE: ${{ inputs.warmup-load-probe }}
               run: |
                   PRIORITY_ROOT="${GITHUB_WORKSPACE}"
                   if [ -d "${GITHUB_WORKSPACE}/.ci-priority" ]; then
@@ -299,6 +310,9 @@ jobs:
                     VALIDATE_ARGS=(--target "$TARGET_CLUSTER")
                     if [ "$READINESS_ONLY" = "true" ]; then
                       VALIDATE_ARGS+=(--readiness-only)
+                    fi
+                    if [ "$WARMUP_LOAD_PROBE" = "true" ]; then
+                      VALIDATE_ARGS+=(--warmup-load-probe)
                     fi
                     python3 runners/validate_cluster_target_matrix.py \
                       "${VALIDATE_ARGS[@]}" <<<"$CONFIG_JSON"
@@ -383,6 +397,7 @@ jobs:
             target-cluster: ${{ needs.get-jobs.outputs.target-cluster }}
             cluster-profile: ${{ needs.get-jobs.outputs.target-profile }}
             readiness-only: ${{ inputs.readiness-only }}
+            warmup-load-probe: ${{ inputs.warmup-load-probe }}
 
     test-sweep-multi-node-evals:
         needs: get-jobs

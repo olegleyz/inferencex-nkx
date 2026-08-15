@@ -213,6 +213,11 @@ on:
         required: false
         type: boolean
         default: false
+      warmup-load-probe:
+        description: "Preserve reviewed warmup load and reduce only measured prompts"
+        required: false
+        type: boolean
+        default: false
 
 env:
   RANDOM_RANGE_RATIO: 0.8
@@ -254,6 +259,7 @@ env:
   INFERENCEX_CLUSTER_PROFILE: ${{ inputs.cluster-profile }}
   INFERENCEX_TARGET_CLUSTER: ${{ inputs.target-cluster }}
   INFERENCEX_READINESS_ONLY: ${{ inputs.readiness-only && '1' || '0' }}
+  INFERENCEX_WARMUP_LOAD_PROBE: ${{ inputs.warmup-load-probe && '1' || '0' }}
   PYTHONDONTWRITEBYTECODE: '1'
   PYTHONPYCACHEPREFIX: /tmp/inferencex-pycache
 
@@ -307,7 +313,7 @@ jobs:
       ${{ inputs.spec-decoding != 'none' && inputs.spec-decoding || '' }}
       ${{ inputs.kv-offloading != '' && inputs.kv-offloading != 'none' && format('{0} KV offload', inputs.kv-offloading) || '' }}
       ${{ inputs.kv-offload-backend != '' && inputs.kv-offload-backend != 'none' && inputs.kv-offload-backend != 'default' && inputs.kv-offload-backend || '' }}
-      c${{ join(fromJson(inputs.conc-list), 'x') }}${{ inputs.readiness-only && ' | readiness' || (inputs.eval-only && ' | eval-only' || (inputs.run-eval && ' | eval' || '')) }}
+      c${{ join(fromJson(inputs.conc-list), 'x') }}${{ inputs.readiness-only && ' | readiness' || (inputs.warmup-load-probe && ' | warmup-load-probe' || (inputs.eval-only && ' | eval-only' || (inputs.run-eval && ' | eval' || ''))) }}
 
     steps:
       - name: Verify runner and Slurm target identity
@@ -451,7 +457,7 @@ jobs:
           RUNNER_NAME: ${{ runner.name }}
           RUNNER_TYPE: ${{ inputs.runner }}
           # Hash uniquely on all prefill/decode parallelism fields, worker counts, serving mode, concurrency, and runner.
-          RESULT_FILENAME: ${{ inputs.target-cluster || 'default' }}_${{ env.EXP_NAME }}_${{ env.PRECISION }}_${{ env.FRAMEWORK }}_prefill-tp${{ env.PREFILL_TP }}-pp${{ env.PREFILL_PP_SIZE }}-dcp${{ env.PREFILL_DCP_SIZE }}-pcp${{ env.PREFILL_PCP_SIZE }}-ep${{ env.PREFILL_EP }}-dp${{ env.PREFILL_DP_ATTN }}-nw${{ env.PREFILL_NUM_WORKERS }}_decode-tp${{ env.DECODE_TP }}-pp${{ env.DECODE_PP_SIZE }}-dcp${{ env.DECODE_DCP_SIZE }}-pcp${{ env.DECODE_PCP_SIZE }}-ep${{ env.DECODE_EP }}-dp${{ env.DECODE_DP_ATTN }}-nw${{ env.DECODE_NUM_WORKERS }}_disagg-${{ env.DISAGG }}_spec-${{ env.SPEC_DECODING }}_conc${{ join(fromJson(inputs.conc-list), 'x') }}${{ inputs.readiness-only && '_readiness' || '' }}_${{ runner.name }}
+          RESULT_FILENAME: ${{ inputs.target-cluster || 'default' }}_${{ env.EXP_NAME }}_${{ env.PRECISION }}_${{ env.FRAMEWORK }}_prefill-tp${{ env.PREFILL_TP }}-pp${{ env.PREFILL_PP_SIZE }}-dcp${{ env.PREFILL_DCP_SIZE }}-pcp${{ env.PREFILL_PCP_SIZE }}-ep${{ env.PREFILL_EP }}-dp${{ env.PREFILL_DP_ATTN }}-nw${{ env.PREFILL_NUM_WORKERS }}_decode-tp${{ env.DECODE_TP }}-pp${{ env.DECODE_PP_SIZE }}-dcp${{ env.DECODE_DCP_SIZE }}-pcp${{ env.DECODE_PCP_SIZE }}-ep${{ env.DECODE_EP }}-dp${{ env.DECODE_DP_ATTN }}-nw${{ env.DECODE_NUM_WORKERS }}_disagg-${{ env.DISAGG }}_spec-${{ env.SPEC_DECODING }}_conc${{ join(fromJson(inputs.conc-list), 'x') }}${{ inputs.readiness-only && '_readiness' || (inputs.warmup-load-probe && '_warmup-load-probe' || '') }}_${{ runner.name }}
         run: |
           set -x
           # Export RESULT_FILENAME early so it's available for artifact uploads even if cancelled
